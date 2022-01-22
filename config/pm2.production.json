@@ -1,0 +1,13 @@
+{
+	"apps": [{
+		"name"				: "social-picker-api",
+		"script"			: "./social-picker-service.js",
+		"watch"				: false,
+		"append"			: true,
+		"sourceDir"			: "./",
+		"log_date_format"	: "YYYY-MM-DD HH:mm:ss Z",
+		"env"				: {
+			"NODE_ENV": "production"
+		}
+	}]
+}

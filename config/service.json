@@ -1,0 +1,4 @@
+{
+	"PORT": 8080,
+	"CUSTOM_IMG_VIEWER_SERVICE": "https://example.com/viewer?request=__LINK__&headers=__HEADERS__"
+}
