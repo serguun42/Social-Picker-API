@@ -20,7 +20,8 @@
     "node-html-parser": "^5.2.0",
     "pm2": "^5.1.2",
     "tumblr.js": "^3.0.0",
-    "twitter-lite": "^1.1.0"
+    "twitter-lite": "^1.1.0",
+    "youtube-dl-exec": "^2.0.2"
   },
   "devDependencies": {
     "nodemon": "^2.0.15",

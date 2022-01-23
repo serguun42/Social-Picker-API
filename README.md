@@ -26,6 +26,8 @@ Development config files can be created and placed along production ones (e.g. `
 * *Instagram* – images, videos including posts with multiple ones
 * *Pixiv* – images. Uses external service for end-user viewing of hi-res images due to Referer Header issues.
 * *Reddit* – images, videos and gifs including posts with multiple ones. Uses [`combine-video`](./util/combine-video.js) for joining audio- and video-streams via `ffmpeg`
+* *Youtube* – videos with only video streams, only audio streams and both
+* *Osnova* – images extracted from post
 * *Tumblr* – images and galeries
 * *Danbooru* – images
 * *Gelbooru* – images
@@ -43,3 +45,5 @@ Development config files can be created and placed along production ones (e.g. `
 * [Twitter API page for getting status](https://developer.twitter.com/en/docs/tweets/post-and-engage/api-reference/get-statuses-show-id)
 * [Tumblr API](https://www.tumblr.com/docs/en/api/v2)
 * [ffmpeg](https://ffmpeg.org/ffmpeg.html)
+* [Youtube-DL](https://github.com/ytdl-org/youtube-dl)
+* [Osnova API](https://cmtt-ru.github.io/osnova-api/)

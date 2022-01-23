@@ -1,6 +1,7 @@
 const NodeFetch = require("node-fetch").default;
 const TwitterLite = require("twitter-lite");
 const TumblrJS = require("tumblr.js");
+const YoutubeDLExec = require("youtube-dl-exec");
 const parseHTML = require("node-html-parser").parse;
 const CombineVideo = require("../util/combine-video");
 const { SafeParseURL, ParseQuery } = require("../util/urls");
@@ -443,7 +444,7 @@ const Reddit = (url) => {
 							if (filename)
 								resolve({ filename, onDoneCallback, audioSource: audio });
 							else
-								resolve({ url: video })
+								resolve({ url: video });
 						})
 						.catch(() => resolve({ url: video }));
 					}).catch(() => resolve({ url: video }));
@@ -457,17 +458,17 @@ const Reddit = (url) => {
 							videoSources.push({
 								externalUrl: url,
 								type: isGif ? "gif" : "video"
-							})
+							});
 						else if (filename)
 							videoSources.push({
 								externalUrl: video,
-								type: isGif & !audioSource ? "gif" : "video",
+								type: (isGif && !audioSource) ? "gif" : "video",
 								otherSources: {
 									audio: audioSource
 								},
 								filename: filename,
 								fileCallback: onDoneCallback
-							})
+							});
 
 						return redditResolve({
 							author,
@@ -528,7 +529,7 @@ const Reddit = (url) => {
 				}
 			}
 		}).catch(redditReject);
-	})
+	});
 }
 
 /**
@@ -663,7 +664,7 @@ const Gelbooru = (url) => NodeFetch(url.href)
 			type: "photo",
 			externalUrl: source
 		}]
-	})
+	});
 });
 
 /**
@@ -700,7 +701,7 @@ const Konachan = (url) => NodeFetch(url.href)
 			type: "photo",
 			externalUrl: source
 		}]
-	})
+	});
 });
 
 /**
@@ -737,7 +738,7 @@ const Yandere = (url) => NodeFetch(url.href)
 			type: "photo",
 			externalUrl: source
 		}]
-	})
+	});
 });
 
 /**
@@ -774,7 +775,7 @@ const Eshuushuu = (url) => NodeFetch(url.href)
 			type: "photo",
 			externalUrl: source
 		}]
-	})
+	});
 });
 
 /**
@@ -812,7 +813,7 @@ const Sankaku = (url) => NodeFetch(url.href)
 			type: "photo",
 			externalUrl: source
 		}]
-	})
+	});
 });
 
 /**
@@ -863,7 +864,7 @@ const Zerochan = (url) => NodeFetch(url.href)
 			type: "photo",
 			externalUrl: source
 		}]
-	})
+	});
 });
 
 /**
@@ -902,7 +903,7 @@ const AnimePictures = (url) => NodeFetch(url.href)
 			type: "photo",
 			externalUrl: new URL(imgLinkURL.pathname + imgLinkURL.search, url.origin)
 		}]
-	})
+	});
 });
 
 /**
@@ -967,6 +968,193 @@ const KemonoParty = (url) => NodeFetch(url.href)
 	}
 });
 
+/**
+ * @param {URL} url
+ * @returns {Promise<import("../types").SocialPost>}
+ */
+const Youtube = (url) => YoutubeDLExec(url.href, {
+	dumpSingleJson: true,
+	noWarnings: true,
+	noCallHome: true,
+	noCheckCertificate: true,
+	preferFreeFormats: true,
+	youtubeSkipDashManifest: true,
+	referer: "https://youtube.com"
+})
+.then(/** @param {import("../types/youtube-dl").YoutubeDLOutput} youtubeVideoOutput */ (youtubeVideoOutput) => {
+	/** @type {import("../types").SocialPost} */
+	const socialPost = {
+		author: youtubeVideoOutput.uploader,
+		authorURL: youtubeVideoOutput.uploader_url,
+		caption: youtubeVideoOutput.title + (youtubeVideoOutput.description?.length < 50 ? youtubeVideoOutput.description : ""),
+		postURL: youtubeVideoOutput.webpage_url,
+		medias: []
+	}
+
+	/**
+	 * @param {number} bytes
+	 * @returns {string}
+	 */
+	const LocalHumanReadableSize = (bytes) => {
+		const power = Math.floor(Math.log(bytes) / Math.log(1024));
+		return `${(bytes / Math.pow(1024, power)).toFixed(2)} ${["B", "kB", "MB", "GB", "TB"][power]}`;
+	}
+
+	const sortedFormats = youtubeVideoOutput.formats.sort((prev, next) => prev.height - next.height);
+
+	sortedFormats.forEach((format) => {
+		if (
+			(!format.vcodec || format.vcodec === "none") &&
+			(typeof format.acodec == "string" && format.acodec !== "none")
+		)
+			socialPost.medias.push({
+				type: "audio",
+				externalUrl: format.url,
+				filesize: format.filesize,
+				description: `${format.format_note} / ${format.acodec.split(".")[0]} (${format.ext}) – audio${format.filesize ? " / " + LocalHumanReadableSize(format.filesize) : ""}`
+			});
+		else if (
+			(!format.acodec || format.acodec === "none") &&
+			(typeof format.vcodec == "string" && format.vcodec !== "none")
+		)
+			socialPost.medias.push({
+				type: "video",
+				externalUrl: format.url,
+				filesize: format.filesize,
+				description: `${format.format_note} / ${format.vcodec.split(".")[0]} (${format.ext}) – video${format.filesize ? " / " + LocalHumanReadableSize(format.filesize) : ""}`
+			});
+		else if (
+			(typeof format.acodec == "string" && format.acodec !== "none") &&
+			(typeof format.vcodec == "string" && format.vcodec !== "none")
+		)
+			socialPost.medias.push({
+				type: "video",
+				externalUrl: format.url,
+				filesize: format.filesize,
+				description: `${format.format_note} / ${format.vcodec.split(".")[0]} + ${format.acodec.split(".")[0]} (${format.ext}) – video + audio${format.filesize ? " / " + LocalHumanReadableSize(format.filesize) : ""}`
+			});
+	});
+
+	return Promise.resolve(socialPost);
+})
+.catch((e) => Promise.reject(new Error(`youtube-dl-exec error: ${e}`)));
+
+/**
+ * @param {URL} url
+ * @returns {Promise<import("../types").SocialPost>}
+ */
+const Osnova = (url) => {
+	const siteHostname = url.hostname.replace(/^.*\.(\w+\.\w+)$/, "$1").replace("the.tj", "tjournal.ru");
+
+	const isUser = /^\/u/i.test(url.pathname);
+	const postID = (isUser ? 
+		url.pathname.match(/^\/u\/\d+[\w\-]+\/(?<postID>\d+)/)
+		:
+		url.pathname.match(/^(?:(?:\/s)?\/[\w\-]+)?\/(?<postID>\d+)/)
+	)?.groups?.["postID"];
+
+	if (!postID) return Promise.resolve(null);
+	
+	return NodeFetch(`https://api.${siteHostname}/v1.9/entry/${postID}`)
+	.then((res) => {
+		if (res.status === 200)
+			return res.json()
+			.then((response) => {
+				/** Osnova API post wrapped in `result` */
+				if (response.result)
+					return Promise.resolve(response.result);
+				else
+					return Promise.reject(new Error("No <result> in Osnova API response"));
+			});
+		else
+			return Promise.reject(new Error(`Status code = ${res.status} ${res.statusText}. URL = ${url.href}`));
+	})
+	.then(/** @param {import("../types/osnova").OsnovaPost} osnovaPost */ (osnovaPost) => {
+		/** @type {import("../types").SocialPost} */
+		const socialPost = {
+			author: osnovaPost.author.name,
+			authorURL: osnovaPost.author.url,
+			caption: osnovaPost.title || "",
+			postURL: osnovaPost.url,
+			medias: []
+		};
+
+
+		/** @type {{ waiting: "Twitter" | "Instagram", link: string }[]} */
+		const waitingExternalQueue = [];
+
+
+		/**
+		 * @param {{ waiting: "Twitter" | "Instagram", link: string }} param0
+		 * @returns {Promise<import("../types").Media[]>}
+		 */
+		const LocalLoadExternalBlock = ({ waiting, link }) => {
+			if (waiting !== "Twitter" && waiting !== "Instagram")
+				return Promise.resolve([]);
+
+			return (waiting === "Twitter" ? Twitter : Instagram)(new URL(link))
+			.then((externalBlockPost) => {
+				if (!(externalBlockPost?.medias instanceof Array)) {
+					LogMessageOrError(`Block (${link}) in Osnova post is corrupted`);
+					return Promise.resolve([]);
+				}
+
+				return Promise.resolve(externalBlockPost.medias);
+			})
+			.catch((e) => {
+				LogMessageOrError(new Error(`Failed to load block data (${link}) inside Osnova post: ${e}`));
+				return Promise.resolve([]);
+			});
+		}
+		
+
+		osnovaPost.blocks.forEach((block) => {
+			if (block.type === "tweet")
+				return waitingExternalQueue.push({
+					waiting: "Twitter",
+					link: `https://twitter.com/${
+						block.data.tweet.data.tweet_data.user.screen_name
+					}/status/${block.data.tweet.data.tweet_data.id_str}`
+				});
+
+			if (block.type === "instagram")
+				return waitingExternalQueue.push({
+					waiting: "Instagram",
+					link: block.data.instagram.data.box_data.url
+				});
+
+			if (block.type == "media" && block.data.items)
+				block.data.items.forEach((media) => {
+					if (!media.image) return;
+
+					const isImage = (
+						media.image.data.type == "jpg" ||
+						media.image.data.type == "jpeg" ||
+						media.image.data.type == "png"
+					);
+
+					socialPost.medias.push({
+						type: (isImage ? "photo" : "video"),
+						externalUrl: `https://leonardo.osnova.io/${media.image.data.uuid}/${isImage ? "" : "-/format/mp4/"}`
+					});
+				});
+		});
+
+
+		if (!waitingExternalQueue.length)
+			return Promise.resolve(socialPost);
+
+		return Promise.all(
+			waitingExternalQueue.map((waitingExternalQueueBlock) =>
+				LocalLoadExternalBlock(waitingExternalQueueBlock)
+			)
+		)
+		.then((mediasFromExternalBlocks) => {
+			socialPost.medias = socialPost.medias.concat(mediasFromExternalBlocks.flat());
+			return Promise.resolve(socialPost);
+		});
+	});
+};
 
 
 
@@ -985,7 +1173,9 @@ const SocialParsers = {
 	Sankaku,
 	Zerochan,
 	AnimePictures,
-	KemonoParty
+	KemonoParty,
+	Youtube,
+	Osnova
 };
 
-module.exports = exports = SocialParsers;
+module.exports = SocialParsers;

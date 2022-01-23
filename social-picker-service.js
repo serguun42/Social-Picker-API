@@ -37,17 +37,19 @@ const {
 	TwitterImg,
 	Yandere,
 	Zerochan,
-	KemonoParty
+	KemonoParty,
+	Youtube,
+	Osnova
 } = require("./core/social-parsers");
 
 
 
 /**
- * @param {string} message
+ * @param {string} givenURL
  * @returns {{ status: boolean, url: URL, platform: (url: URL) => Promise<import("./types").SocialPost> }}
  */
-const CheckForLink = (message) => {
-	const url = SafeParseURL(message);
+const CheckForLink = (givenURL) => {
+	const url = SafeParseURL(givenURL);
 
 	if (
 		url.hostname === "twitter.com" ||
@@ -131,6 +133,20 @@ const CheckForLink = (message) => {
 		url.hostname === "www.kemono.party"
 	)
 		return { status: true, platform: KemonoParty, url };
+	else if (
+		url.hostname === "youtube.com" ||
+		url.hostname === "www.youtube.com" ||
+		url.hostname === "youtu.be" ||
+		url.hostname === "m.youtube.com"
+	)
+		return { status: true, platform: Youtube, url };
+	else if (
+		url.hostname === "tjournal.ru" ||
+		url.hostname === "the.tj" ||
+		url.hostname === "dtf.ru" ||
+		url.hostname === "vc.ru"
+	)
+		return { status: true, platform: Osnova, url };
 	else
 		return { status: false };
 };
@@ -188,12 +204,15 @@ http.createServer((req, res) => {
 		return SendStatus(200);
 	} else if (typeof queries["url"] == "string") {
 		const checkedForLink = CheckForLink(queries["url"]);
+
 		if (!checkedForLink.status || !checkedForLink.url || typeof checkedForLink.platform !== "function")
 			return SendStatus(404);
 
 
 		return checkedForLink.platform(checkedForLink.url)
 		.then((socialPost) => {
+			if (!socialPost) return SendStatus(404);
+
 			socialPost.medias.forEach((media) => {
 				if (!media.fileCallback) return;
 

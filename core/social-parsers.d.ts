@@ -73,3 +73,13 @@ export function AnimePictures(url: URL): Promise<import("../types").SocialPost>;
  * @returns {Promise<import("../types").SocialPost>}
  */
 export function KemonoParty(url: URL): Promise<import("../types").SocialPost>;
+/**
+ * @param {URL} url
+ * @returns {Promise<import("../types").SocialPost>}
+ */
+export function Youtube(url: URL): Promise<import("../types").SocialPost>;
+/**
+ * @param {URL} url
+ * @returns {Promise<import("../types").SocialPost>}
+ */
+export function Osnova(url: URL): Promise<import("../types").SocialPost>;
