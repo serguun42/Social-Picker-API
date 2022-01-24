@@ -41,6 +41,7 @@ Development config files can be created and placed along production ones (e.g. `
 
 
 #### Some links
+* [Telegram bot based on this service](https://github.com/serguun42/Anime-Ultra-Bot)
 * [Telegram Bots API](https://core.telegram.org/bots/api)
 * [Twitter API page for getting status](https://developer.twitter.com/en/docs/tweets/post-and-engage/api-reference/get-statuses-show-id)
 * [Tumblr API](https://www.tumblr.com/docs/en/api/v2)

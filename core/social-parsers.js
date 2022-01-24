@@ -327,7 +327,11 @@ const Pixiv = (url) => {
 
 			medias.push({
 				type: "photo",
-				externalUrl: encodeURI(masterFilename.replace(/\d+(_master\d+\.[\w\d]+$)/i, i + "$1")),
+				externalUrl: CUSTOM_IMG_VIEWER_SERVICE
+					.replace(/__LINK__/, encodeURI(masterFilename.replace(/\d+(_master\d+\.[\w\d]+$)/i, i + "$1")))
+					.replace(/__HEADERS__/, encodeURIComponent(
+						JSON.stringify({ Referer: "http://www.pixiv.net/" })
+					)),
 				original: CUSTOM_IMG_VIEWER_SERVICE
 					.replace(/__LINK__/, encodeURI(origBasename + i + "." + origFiletype))
 					.replace(/__HEADERS__/, encodeURIComponent(
@@ -1135,7 +1139,8 @@ const Osnova = (url) => {
 
 					socialPost.medias.push({
 						type: (isImage ? "photo" : "video"),
-						externalUrl: `https://leonardo.osnova.io/${media.image.data.uuid}/${isImage ? "" : "-/format/mp4/"}`
+						externalUrl: `https://leonardo.osnova.io/${media.image.data.uuid}/${isImage ? "-/preview/1000/" : "-/format/mp4/"}`,
+						original: `https://leonardo.osnova.io/${media.image.data.uuid}`
 					});
 				});
 		});
