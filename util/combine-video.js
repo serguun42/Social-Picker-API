@@ -11,15 +11,15 @@ const LogMessageOrError = require("./log");
 
 const TEMP_FOLDER = process.env["TEMP"] || "/tmp/";
 
-
+/** @typedef {{ externalUrl: string } & { filename: string, fileCallback: () => void, videoSource: string, audioSource: string }} CombinedVideoResult */
 /**
  * @param {string} video
  * @param {string} audio
- * @returns {Promise<{ url: string } | { filename: string, onDoneCallback: () => void }>}
+ * @returns {Promise<CombinedVideoResult>}
  */
 const CombineVideo = (video, audio) => {
 	if (!video) return Promise.reject("No video URL");
-	if (!audio) return Promise.resolve({ url: video });
+	if (!audio) return Promise.resolve({ externalUrl: video });
 
 
 	const videoBaseFilename = `socialpicker_${
@@ -60,13 +60,18 @@ const CombineVideo = (video, audio) => {
 		ffmpegVideo.save(outFilename, (e) => {
 			if (e) return reject(e);
 
-			resolve({ filename: outFilename, onDoneCallback: LocalDeleteTempFiles });
+			resolve({
+				filename: outFilename,
+				fileCallback: LocalDeleteTempFiles,
+				videoSource: video,
+				audioSource: audio
+			});
 		});
 	})).catch((e) => {
 		LogMessageOrError(e);
 		LocalDeleteTempFiles();
-		return Promise.resolve({ url: video });
+		return Promise.resolve({ externalUrl: video });
 	});
 };
 
-module.exports = CombineVideo;
+module.exports = exports = CombineVideo;

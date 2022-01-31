@@ -144,16 +144,6 @@ const CombineQueries = iQueries => {
 };
 
 /**
- * @param {string} iPathname
- * @returns {URL}
- */
-const SafeURL = iPathname => {
-	if (typeof iPathname !== "string") return new URL("https://example.com");
-
-	return new URL(iPathname.replace(/\/+/g, "/"), "https://example.com");
-};
-
-/**
  * @param {string} iHref
  * @returns {URL}
  */
@@ -212,7 +202,6 @@ const SetCompleteMIMEType = iLoc => {
 module.exports = {
 	SafeDecode,
 	SafeEscape,
-	SafeURL,
 	SafeParseURL,
 	ParseCookie,
 	ParsePath,

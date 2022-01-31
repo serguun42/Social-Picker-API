@@ -1,8 +1,11 @@
 export type Media = {
-	type: | "photo" | "gif" | "video" | "audio";
+	type: "photo" | "gif" | "video" | "audio";
 	externalUrl: string;
 	original?: string;
+	/** Combined local copy of file. Later front and API identify file by `"filehash"` */
 	filename?: string;
+	/** File extension */
+	filetype?: string;
 	otherSources?: { [otherSourceOriginKey: string]: string };
 	/** Call it when done */
 	fileCallback?: () => void;

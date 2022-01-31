@@ -9,11 +9,6 @@ export function SafeDecode(iString: string): string;
  */
 export function SafeEscape(iString: string): string;
 /**
- * @param {string} iPathname
- * @returns {URL}
- */
-export function SafeURL(iPathname: string): URL;
-/**
  * @param {string} iHref
  * @returns {URL}
  */

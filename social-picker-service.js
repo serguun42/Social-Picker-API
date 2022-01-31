@@ -21,7 +21,7 @@ const STATUSES = GetStatusCodes(http.STATUS_CODES);
 const DEV = require("./util/is-dev");
 const { PORT } = (DEV ? require("./config/service.dev.json") : require("./config/service.json"));
 const LogMessageOrError = require("./util/log");
-const { SafeParseURL, SetCompleteMIMEType, ParseQuery, SafeURL } = require("./util/urls");
+const { SafeParseURL, SetCompleteMIMEType, ParseQuery } = require("./util/urls");
 const {
 	AnimePictures,
 	Danbooru,
@@ -159,7 +159,7 @@ const VideoHooksStorage = {};
 
 
 http.createServer((req, res) => {
-	const queries = ParseQuery(SafeURL(req.url).search);
+	const queries = ParseQuery(SafeParseURL(req.url).search);
 
 	res.setHeader("Content-Type", "charset=UTF-8");
 

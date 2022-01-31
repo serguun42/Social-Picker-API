@@ -330,12 +330,12 @@ const Pixiv = (url) => {
 				externalUrl: CUSTOM_IMG_VIEWER_SERVICE
 					.replace(/__LINK__/, encodeURI(masterFilename.replace(/\d+(_master\d+\.[\w\d]+$)/i, i + "$1")))
 					.replace(/__HEADERS__/, encodeURIComponent(
-						JSON.stringify({ Referer: "http://www.pixiv.net/" })
+						JSON.stringify({ referer: "https://www.pixiv.net/" })
 					)),
 				original: CUSTOM_IMG_VIEWER_SERVICE
 					.replace(/__LINK__/, encodeURI(origBasename + i + "." + origFiletype))
 					.replace(/__HEADERS__/, encodeURIComponent(
-						JSON.stringify({ Referer: "http://www.pixiv.net/" })
+						JSON.stringify({ referer: "https://www.pixiv.net/" })
 					))
 			});
 		}
@@ -344,13 +344,13 @@ const Pixiv = (url) => {
 
 		return Promise.resolve({
 			caption: post["title"] || post["illustTitle"] || post["description"] || post["illustComment"],
-			author: post["userId"],
+			author: post["userName"],
 			authorURL: "https://www.pixiv.net/en/users/" + post["userId"],
 			postURL,
 			medias
 		});
 	});
-}
+};
 
 /**
  * @param {URL} url
@@ -406,9 +406,10 @@ const Reddit = (url) => {
 
 
 				return new Promise((resolve) => {
-					if (isGif) return resolve({ url: video });
+					if (isGif) return resolve({ externalUrl: video });
 
-					if (!post?.secure_media?.reddit_video?.hls_url) return resolve({ url: video });
+					if (!post?.secure_media?.reddit_video?.hls_url)
+						return resolve({ externalUrl: video });
 
 					const hslPlaylist = post.secure_media.reddit_video.hls_url;
 
@@ -438,40 +439,44 @@ const Reddit = (url) => {
 						else
 							return Promise.reject(`Response status from Reddit ${response.status}`);
 					}).then((audioPlaylistFile) => {
-						const audioFilename = audioPlaylistFile.split("\n").filter((line) => line && !/^#/.test(line)).pop() || "",
-							  audio = audioFilename.trim() ? hslPlaylist.replace(/\/[^\/]+$/, `/${audioFilename}`) : "";
+						const audioFilename = audioPlaylistFile.split("\n").filter((line) =>
+							line && !/^#/.test(line)
+						).pop() || "";
+						const audio = audioFilename.trim() ? hslPlaylist.replace(/\/[^\/]+$/, `/${audioFilename}`) : "";
 
-						if (!audio) return resolve({ url: video });
+						if (!audio) return resolve({ externalUrl: video });
 
 						CombineVideo(video, audio)
-						.then(({ filename, onDoneCallback }) => {
-							if (filename)
-								resolve({ filename, onDoneCallback, audioSource: audio });
-							else
-								resolve({ url: video });
-						})
-						.catch(() => resolve({ url: video }));
-					}).catch(() => resolve({ url: video }));
-				}).then(
-					/** @param {{url?: string, filename?: string, onDoneCallback?: () => void, audioSource?: string}} */
-					({ url, filename, onDoneCallback, audioSource }) => {
+						.then((videoResult) => resolve(videoResult))
+						.catch(() => resolve({ externalUrl: video }));
+					}).catch(() => resolve({ externalUrl: video }));
+				}).then(/** @param {import("../util/combine-video").CombinedVideoResult} videoResult */ (videoResult) => {
+						const {
+							externalUrl,
+							filename,
+							fileCallback,
+							videoSource,
+							audioSource
+						} = videoResult;
+
 						/** @type {import("../types").Media[]} */
 						const videoSources = [];
 
-						if (url)
+						if (filename)
 							videoSources.push({
-								externalUrl: url,
-								type: isGif ? "gif" : "video"
-							});
-						else if (filename)
-							videoSources.push({
-								externalUrl: video,
 								type: (isGif && !audioSource) ? "gif" : "video",
 								otherSources: {
-									audio: audioSource
+									audioSource,
+									videoSource
 								},
-								filename: filename,
-								fileCallback: onDoneCallback
+								filename,
+								filetype: SafeParseURL(videoSource).pathname?.split(".").pop(),
+								fileCallback
+							});
+						else if (externalUrl)
+							videoSources.push({
+								externalUrl,
+								type: isGif ? "gif" : "video"
 							});
 
 						return redditResolve({
@@ -534,7 +539,7 @@ const Reddit = (url) => {
 			}
 		}).catch(redditReject);
 	});
-}
+};
 
 /**
  * @param {URL} url
@@ -586,7 +591,7 @@ const Tumblr = (url) => {
 
 		return Promise.resolve(fineTumblrSocialPost);
 	});
-}
+};
 
 /**
  * @param {URL} url
@@ -1015,6 +1020,7 @@ const Youtube = (url) => YoutubeDLExec(url.href, {
 				type: "audio",
 				externalUrl: format.url,
 				filesize: format.filesize,
+				filetype: format.ext,
 				description: `${format.format_note} / ${format.acodec.split(".")[0]} (${format.ext}) – audio${format.filesize ? " / " + LocalHumanReadableSize(format.filesize) : ""}`
 			});
 		else if (
@@ -1025,6 +1031,7 @@ const Youtube = (url) => YoutubeDLExec(url.href, {
 				type: "video",
 				externalUrl: format.url,
 				filesize: format.filesize,
+				filetype: format.ext,
 				description: `${format.format_note} / ${format.vcodec.split(".")[0]} (${format.ext}) – video${format.filesize ? " / " + LocalHumanReadableSize(format.filesize) : ""}`
 			});
 		else if (
@@ -1035,6 +1042,7 @@ const Youtube = (url) => YoutubeDLExec(url.href, {
 				type: "video",
 				externalUrl: format.url,
 				filesize: format.filesize,
+				filetype: format.ext,
 				description: `${format.format_note} / ${format.vcodec.split(".")[0]} + ${format.acodec.split(".")[0]} (${format.ext}) – video + audio${format.filesize ? " / " + LocalHumanReadableSize(format.filesize) : ""}`
 			});
 	});
