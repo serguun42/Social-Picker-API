@@ -211,7 +211,7 @@ http.createServer((req, res) => {
 
 		return checkedForLink.platform(checkedForLink.url)
 		.then((socialPost) => {
-			if (!socialPost) return SendStatus(404);
+			if (!socialPost?.medias) return SendStatus(404);
 
 			socialPost.medias.forEach((media) => {
 				if (!media.fileCallback) return;

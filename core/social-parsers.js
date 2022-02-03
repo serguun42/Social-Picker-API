@@ -273,7 +273,7 @@ const Pixiv = (url) => {
 	} else if (ParseQuery(url.search)["illust_id"])
 		pixivID = ParseQuery(url.search)["illust_id"];
 
-	if (!pixivID) return new Promise.resolve({});
+	if (!pixivID) return Promise.resolve({});
 
 
 	const postURL = `https://www.pixiv.net/en/artworks/${pixivID}`;
@@ -981,14 +981,26 @@ const KemonoParty = (url) => NodeFetch(url.href)
  * @param {URL} url
  * @returns {Promise<import("../types").SocialPost>}
  */
-const Youtube = (url) => YoutubeDLExec(url.href, {
-	dumpSingleJson: true,
-	noWarnings: true,
-	noCallHome: true,
-	noCheckCertificate: true,
-	preferFreeFormats: true,
-	youtubeSkipDashManifest: true,
-	referer: "https://youtube.com"
+const Youtube = (url) => new Promise((resolve, reject) => {
+	const shortDomainID = url.href.match(/youtu\.be\/([^"&?\/\s]+)$/i)?.[1];
+	const fullDomainID = /youtube\.com/gi.test(url.hostname) && ParseQuery(url.search)?.["v"];
+
+	if (!shortDomainID && !fullDomainID)
+		return reject("Bad youtube link");
+
+	const youtubeLink = `https://www.youtube.com/watch?v=${shortDomainID || fullDomainID}`;
+
+	return YoutubeDLExec(youtubeLink, {
+		dumpSingleJson: true,
+		noWarnings: true,
+		noCallHome: true,
+		noCheckCertificate: true,
+		preferFreeFormats: true,
+		youtubeSkipDashManifest: true,
+		referer: "https://youtube.com"
+	})
+	.then(resolve)
+	.catch(reject);
 })
 .then(/** @param {import("../types/youtube-dl").YoutubeDLOutput} youtubeVideoOutput */ (youtubeVideoOutput) => {
 	/** @type {import("../types").SocialPost} */
@@ -1008,6 +1020,8 @@ const Youtube = (url) => YoutubeDLExec(url.href, {
 		const power = Math.floor(Math.log(bytes) / Math.log(1024));
 		return `${(bytes / Math.pow(1024, power)).toFixed(2)} ${["B", "kB", "MB", "GB", "TB"][power]}`;
 	}
+
+	if (!youtubeVideoOutput.formats) return Promise.resolve(socialPost);
 
 	const sortedFormats = youtubeVideoOutput.formats.sort((prev, next) => prev.height - next.height);
 
