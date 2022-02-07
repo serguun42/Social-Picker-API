@@ -1120,10 +1120,9 @@ const Osnova = (url) => {
 
 			return (waiting === "Twitter" ? Twitter : Instagram)(new URL(link))
 			.then((externalBlockPost) => {
-				if (!(externalBlockPost?.medias instanceof Array)) {
-					LogMessageOrError(`Block (${link}) in Osnova post is corrupted`);
+				/** Block in Osnova post is corrupted */
+				if (!(externalBlockPost?.medias instanceof Array))
 					return Promise.resolve([]);
-				}
 
 				return Promise.resolve(externalBlockPost.medias);
 			})
