@@ -1,6 +1,6 @@
 # Social-Picker-API
 
-This project is used to extract media from various posting platfroms like Twitter, Reddit, Pixiv, Youtube and many others. It's written for Node.js and it works as inner service for other local services, e.g. [Anime Ultra Bot](https://github.com/serguun42/Anime-Ultra-Bot) or [Social Picker Vue.js](https://github.com/serguun42/Social-Picker-Vue).
+This project is used to extract media from various posting platforms like Twitter, Reddit, Pixiv, Youtube and many others. It's written for Node.js and it works as local service for other local services, e.g. [Anime Ultra Bot](https://github.com/serguun42/Anime-Ultra-Bot) or [Social Picker Vue.js](https://github.com/serguun42/Social-Picker-Vue).
 
 Send link to post – receive its content.
 

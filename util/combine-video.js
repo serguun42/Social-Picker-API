@@ -74,4 +74,4 @@ const CombineVideo = (video, audio) => {
 	});
 };
 
-module.exports = exports = CombineVideo;
+module.exports = CombineVideo;

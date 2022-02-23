@@ -18,17 +18,8 @@ const {
 const { CUSTOM_IMG_VIEWER_SERVICE } = (DEV ? require("../config/service.dev.json") : require("../config/service.json"));
 
 
-const TwitterUser = new TwitterLite(TWITTER_OAUTH);
-
-let TwitterApp = null;
-
-TwitterUser.getBearerToken()
-.then((response) => {
-	TwitterApp = new TwitterLite({
-		bearer_token: response.access_token
-	});
-})
-.catch(LogMessageOrError);
+/** @type {import("twitter-lite").default} */
+const TwitterInstance = new TwitterLite(TWITTER_OAUTH);
 
 const TumblrClient = TumblrJS.createClient({
 	credentials: TUMBLR_OAUTH,
@@ -42,109 +33,87 @@ const TumblrClient = TumblrJS.createClient({
  * @returns {Promise<import("../types").SocialPost>}
  */
 const Twitter = (url) => {
-	if (!(url instanceof URL)) url = new URL(url);
-
-
-	let { pathname } = url,
-		statusID = 0;
-
-	if (pathname.match(/^\/[\w\d\_]+\/status(es)?\/(\d+)/))
-		statusID = pathname.match(/^\/[\w\d\_]+\/status(es)?\/(\d+)/)[2];
-	else if (pathname.match(/^\/statuses\/(\d+)/))
-		statusID = pathname.match(/^\/statuses\/(\d+)/)[1];
-	else if (pathname.match(/^\/i\/web\/status(es)?\/(\d+)/))
-		statusID = pathname.match(/^\/i\/web\/status(es)?\/(\d+)/)[2];
-
+	const statusID = url.pathname.match(/^(?:\/[\w_]+)?\/status(?:es)?\/(\d+)/)?.[1];
 
 	if (!statusID) return Promise.resolve({});
 
 
-	return new Promise((resolve, reject) => {
-		TwitterApp.get("statuses/show", {
-			id: statusID,
-			tweet_mode: "extended"
-		})
-		.then((tweet) => {
-			const MEDIA = tweet["extended_entities"]?.["media"];
+	return TwitterInstance.get("statuses/show", {
+		id: statusID,
+		tweet_mode: "extended"
+	})
+	.then(/** @param {import("../types/tweet").Tweet} tweet */ (tweet) => {
+		const medias = tweet.extended_entities?.media;
+		if (!medias?.length) return Promise.resolve({});
 
-			if (!MEDIA) return resolve({});
-			if (!MEDIA.length) return resolve({});
+		let sendingMessageText = tweet.full_text || "";
 
-			let sendingMessageText = tweet["full_text"];
+		tweet.entities?.urls?.forEach((link) =>
+			sendingMessageText = sendingMessageText.replace(new RegExp(link.url, "gi"), link.expanded_url)
+		);
 
-			tweet["entities"]["urls"].forEach((link) =>
-				sendingMessageText = sendingMessageText.replace(new RegExp(link.url, "gi"), link.expanded_url)
-			);
-
-			sendingMessageText = sendingMessageText
-													.replace(/\b(http(s)?\:\/\/)?t.co\/[\w\d_]+\b$/gi, "")
-													.replace(/(\s)+/gi, "$1")
-													.trim();
+		sendingMessageText = sendingMessageText
+								.replace(/\b(http(s)?\:\/\/)?t.co\/[\w\d_]+\b$/gi, "")
+								.replace(/(\s)+/gi, "$1")
+								.trim();
 
 
-			/** @type {import("../types").SocialPost} */
-			const socialPost = {
-				caption: sendingMessageText,
-				postURL: url.href,
-				author: tweet["user"]["screen_name"],
-				authorURL: `https://twitter.com/${tweet["user"]["screen_name"]}`
-			}
+		/** @type {import("../types").SocialPost} */
+		const socialPost = {
+			caption: sendingMessageText,
+			postURL: url.href,
+			author: tweet.user?.name,
+			authorURL: `https://twitter.com/${tweet.user?.screen_name}`
+		}
 
 
-			if (MEDIA[0]["type"] === "animated_gif") {
-				const variants = MEDIA[0]["video_info"]["variants"].filter(i => (!!i && i.hasOwnProperty("bitrate")));
+		if (medias[0]["type"] === "animated_gif") {
+			const variants = medias[0]["video_info"]["variants"].filter(i => (!!i && i.hasOwnProperty("bitrate")));
 
-				if (!variants || !variants.length) return false;
+			if (!variants || !variants.length) return false;
 
-				let best = variants[0];
+			let best = variants[0];
 
-				variants.forEach((variant) => {
-					if (variant.bitrate > best.bitrate)
-						best = variant;
-				});
+			variants.forEach((variant) => {
+				if (variant.bitrate > best.bitrate)
+					best = variant;
+			});
 
+			socialPost.medias = [
+				{
+					type: "gif",
+					externalUrl: best["url"]
+				}
+			];
+		} else if (medias[0]["type"] === "video") {
+			const variants = medias[0]["video_info"]["variants"].filter(i => (!!i && i.hasOwnProperty("bitrate")));
 
-				socialPost.medias = [
-					{
-						type: "gif",
-						externalUrl: best["url"]
-					}
-				];
-			} else if (MEDIA[0]["type"] === "video") {
-				const variants = MEDIA[0]["video_info"]["variants"].filter(i => (!!i && i.hasOwnProperty("bitrate")));
+			if (!variants || !variants.length) return false;
 
-				if (!variants || !variants.length) return false;
+			let best = variants[0];
 
-				let best = variants[0];
+			variants.forEach((variant) => {
+				if (variant.bitrate > best.bitrate)
+					best = variant;
+			});
 
-				variants.forEach((variant) => {
-					if (variant.bitrate > best.bitrate)
-						best = variant;
-				});
+			socialPost.medias = [
+				{
+					type: "video",
+					externalUrl: best["url"]
+				}
+			];
+		} else {
+			socialPost.medias = medias.map((media) => {
+				if (media["type"] === "photo")
+					return { type: "photo", externalUrl: media["media_url_https"] + ":orig" };
 
-				socialPost.medias = [
-					{
-						type: "video",
-						externalUrl: best["url"]
-					}
-				];
-			} else {
-				/** @type {import("../types").Media[]} */
-				const sourcesArr = MEDIA.map(/** @return {import("../types").Media} */ (media) => {
-					if (media["type"] === "photo")
-						return { type: "photo", externalUrl: media["media_url_https"] + ":orig" };
-
-					return false;
-				}).filter(media => !!media);
-
-
-				socialPost.medias = sourcesArr;
-			}
+				return false;
+			}).filter(media => !!media);
+		}
 
 
-			resolve(socialPost);
-		})
-		.catch(reject);
+		return Promise.resolve(socialPost);
 	});
 };
 
@@ -1118,7 +1087,7 @@ const Osnova = (url) => {
 			if (waiting !== "Twitter" && waiting !== "Instagram")
 				return Promise.resolve([]);
 
-			return (waiting === "Twitter" ? Twitter : Instagram)(new URL(link))
+			return (waiting === "Twitter" ? Twitter : Instagram)(SafeParseURL(link))
 			.then((externalBlockPost) => {
 				/** Block in Osnova post is corrupted */
 				if (!(externalBlockPost?.medias instanceof Array))
@@ -1184,7 +1153,7 @@ const Osnova = (url) => {
 
 
 
-const SocialParsers = {
+module.exports = {
 	Twitter,
 	TwitterImg,
 	Instagram,
@@ -1203,5 +1172,3 @@ const SocialParsers = {
 	Youtube,
 	Osnova
 };
-
-module.exports = SocialParsers;
