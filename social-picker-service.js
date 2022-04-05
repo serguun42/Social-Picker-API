@@ -206,7 +206,10 @@ http.createServer((req, res) => {
 			return SendStatus(404);
 
 
-		return checkedForLink.platform(checkedForLink.url)
+		const platformResponse = checkedForLink.platform(checkedForLink.url);
+		if (!platformResponse) return SendStatus(404);
+
+		return platformResponse
 		.then((socialPost) => {
 			if (!socialPost?.medias) return SendStatus(404);
 
