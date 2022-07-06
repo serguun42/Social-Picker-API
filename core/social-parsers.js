@@ -888,63 +888,69 @@ const AnimePictures = (url) => NodeFetch(url.href)
  * @param {URL} url
  * @returns {Promise<import("../types").SocialPost>}
  */
-const KemonoParty = (url) => NodeFetch(url.href)
-.then((res) => {
-	if (res.status == 200)
-		return res.text();
-	else
-		return Promise.reject(new Error(`Status code = ${res.status} ${res.statusText}. URL = ${url.href}`));
-}).then((kemonoPartyPage) => {
-	/** @type {import("../types").SocialPost} */
-	const socialPost = {
-		author: "",
-		authorURL: "",
-		caption: "",
-		postURL: url.href,
-		medias: []
-	};
+const KemonoParty = (url) => {
+	if (!url.pathname) return;
 
-	try {
-		const parsedHTML = parseHTML(kemonoPartyPage);
-		const filesAnchors = parsedHTML.querySelectorAll(".post__thumbnail > .fileThumb");
+	const postURL = `https://kemono.party${url.pathname}`;
 
-		if (!(filesAnchors instanceof Array)) throw new Error("No array with files");
+	return NodeFetch(postURL)
+	.then((res) => {
+		if (res.status == 200)
+			return res.text();
+		else
+			return Promise.reject(new Error(`Status code = ${res.status} ${res.statusText}. URL = ${url.href}`));
+	}).then((kemonoPartyPage) => {
+		/** @type {import("../types").SocialPost} */
+		const socialPost = {
+			author: "",
+			authorURL: "",
+			caption: "",
+			postURL: url.href,
+			medias: []
+		};
 
-		filesAnchors.slice(1).forEach((fileAnchor) => {
-			/** @type {import("../types").Media} */
-			const media = {
-				type: "photo"
-			};
+		try {
+			const parsedHTML = parseHTML(kemonoPartyPage);
+			const filesAnchors = parsedHTML.querySelectorAll(".post__thumbnail > .fileThumb");
 
-			const fullsizeURL = fileAnchor.getAttribute("href");
-			if (fullsizeURL)
-				media.original = new URL(fullsizeURL, url.origin);
+			if (!(filesAnchors instanceof Array)) throw new Error("No array with files");
 
-			const thumbnailImage = fileAnchor.querySelector("img");
-			if (thumbnailImage)
-				media.externalUrl = new URL(thumbnailImage.getAttribute("src"), url.origin);
+			filesAnchors.slice(1).forEach((fileAnchor) => {
+				/** @type {import("../types").Media} */
+				const media = {
+					type: "photo"
+				};
 
-			socialPost.medias.push(media);
-		});
+				const fullsizeURL = fileAnchor.getAttribute("href");
+				if (fullsizeURL)
+					media.original = new URL(fullsizeURL, url.origin);
+
+				const thumbnailImage = fileAnchor.querySelector("img");
+				if (thumbnailImage)
+					media.externalUrl = new URL(thumbnailImage.getAttribute("src"), url.origin);
+
+				socialPost.medias.push(media);
+			});
 
 
-		const usernameAnchor = parsedHTML.querySelector(".post__user-name");
-		if (usernameAnchor) {
-			socialPost.author = usernameAnchor.innerText?.trim() || "";
-			socialPost.authorURL = new URL(usernameAnchor.getAttribute("href"), url.origin);
+			const usernameAnchor = parsedHTML.querySelector(".post__user-name");
+			if (usernameAnchor) {
+				socialPost.author = usernameAnchor.innerText?.trim() || "";
+				socialPost.authorURL = new URL(usernameAnchor.getAttribute("href"), url.origin);
+			}
+
+
+			const postTitleHeader = parsedHTML.querySelector(".post__title");
+			if (postTitleHeader)
+				socialPost.caption = postTitleHeader.innerText?.trim() || "";
+
+
+			return Promise.resolve(socialPost);
+		} catch (error) {
+			return Promise.reject(error);
 		}
-
-
-		const postTitleHeader = parsedHTML.querySelector(".post__title");
-		if (postTitleHeader)
-			socialPost.caption = postTitleHeader.innerText?.trim() || "";
-
-
-		return Promise.resolve(socialPost);
-	} catch (error) {
-		return Promise.reject(error);
-	}
-});
+	});
+};
 
 /**
  * @param {URL} url

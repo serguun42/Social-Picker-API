@@ -127,7 +127,8 @@ const CheckForLink = (givenURL) => {
 		return { status: true, platform: AnimePictures, url };
 	else if (
 		url.hostname === "kemono.party" ||
-		url.hostname === "www.kemono.party"
+		url.hostname === "www.kemono.party" ||
+		url.hostname === "beta.kemono.party"
 	)
 		return { status: true, platform: KemonoParty, url };
 	else if (
