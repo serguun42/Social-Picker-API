@@ -342,10 +342,17 @@ const Reddit = (url) => {
 		"Accept-Encoding": "gzip, deflate, br",
 		"Accept-Language": "en-US,en;q=0.9,ru;q=0.8",
 		"Cache-Control": "no-cache",
-		"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36",
+		"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36",
 		"Origin": "https://www.reddit.com",
 		"Pragma": "no-cache",
-		"referer": "https://www.reddit.com/"
+		"referer": "https://www.reddit.com/",
+		"sec-ch-ua": `"Chromium";v="104", " Not A;Brand";v="99", "Google Chrome";v="104"`,
+		"sec-ch-ua-mobile": `?0`,
+		"sec-ch-ua-platform": `"Windows"`,
+		"sec-fetch-dest": `document`,
+		"sec-fetch-mode": `navigate`,
+		"sec-fetch-site": `none`,
+		"sec-fetch-user": `?1`
 	};
 
 
@@ -420,43 +427,42 @@ const Reddit = (url) => {
 						.catch(() => resolve({ externalUrl: video }));
 					}).catch(() => resolve({ externalUrl: video }));
 				}).then(/** @param {import("../util/combine-video").CombinedVideoResult} videoResult */ (videoResult) => {
-						const {
-							externalUrl,
+					const {
+						externalUrl,
+						filename,
+						fileCallback,
+						videoSource,
+						audioSource
+					} = videoResult;
+
+					/** @type {import("../types").Media[]} */
+					const videoSources = [];
+
+					if (filename)
+						videoSources.push({
+							type: (isGif && !audioSource) ? "gif" : "video",
+							otherSources: {
+								audioSource,
+								videoSource
+							},
 							filename,
-							fileCallback,
-							videoSource,
-							audioSource
-						} = videoResult;
-
-						/** @type {import("../types").Media[]} */
-						const videoSources = [];
-
-						if (filename)
-							videoSources.push({
-								type: (isGif && !audioSource) ? "gif" : "video",
-								otherSources: {
-									audioSource,
-									videoSource
-								},
-								filename,
-								filetype: SafeParseURL(videoSource).pathname?.split(".").pop(),
-								fileCallback
-							});
-						else if (externalUrl)
-							videoSources.push({
-								externalUrl,
-								type: isGif ? "gif" : "video"
-							});
-
-						return redditResolve({
-							author,
-							authorURL,
-							postURL,
-							caption,
-							medias: videoSources
+							filetype: SafeParseURL(videoSource).pathname?.split(".").pop(),
+							fileCallback
 						});
-					}
-				);
+					else if (externalUrl)
+						videoSources.push({
+							externalUrl,
+							type: isGif ? "gif" : "video"
+						});
+
+					return redditResolve({
+						author,
+						authorURL,
+						postURL,
+						caption,
+						medias: videoSources
+					});
+				});
 			} else {
 				if (isGallery) {
 					/** @type {import("../types").Media[]} */
