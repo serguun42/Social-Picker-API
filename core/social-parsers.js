@@ -328,15 +328,17 @@ const Pixiv = (url) => {
 const Reddit = (url) => {
 	if (!url.pathname) return;
 
-	const REDDIT_POST_REGEXP = /^(\/r\/[\w\d\-\._]+\/comments\/[\w\d\-\.]+)(\/)?/i,
-		  match = url.pathname.match(REDDIT_POST_REGEXP);
+	const REDDIT_POST_REGEXP = /^(?<givenPathname>(?:\/r\/[\w\d\-\._]+)?\/comments\/[\w\d\-\.]+)(?:\/)?/i;
+	const match = (url.hostname === "redd.it"
+		? { groups: { givenPathname: `/comments${url.pathname}` } }
+		: url.pathname.match(REDDIT_POST_REGEXP));
 
-	if (!(match && match[1])) return;
+	/** @type {string} */
+	const givenPathname = match?.groups?.["givenPathname"];
+	if (!givenPathname) return;
 
-	const postJSON = `https://www.reddit.com${match[1]}.json`,
-		  postURL = `https://www.reddit.com${match[1]}${match[2] || ""}`;
-
-
+	const postJSON = `https://www.reddit.com${givenPathname}.json`;
+	const postURL = `https://www.reddit.com${givenPathname}`;
 	const DEFAULT_REDDIT_HEADERS = {
 		"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
 		"Accept-Encoding": "gzip, deflate, br",

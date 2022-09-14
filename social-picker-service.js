@@ -72,7 +72,8 @@ const CheckForLink = (givenURL) => {
 	else if (
 		url.hostname === "reddit.com" ||
 		url.hostname === "www.reddit.com" ||
-		url.hostname === "old.reddit.com"
+		url.hostname === "old.reddit.com" ||
+		url.hostname === "redd.it"
 	)
 		return { status: true, platform: Reddit, url };
 	else if (
