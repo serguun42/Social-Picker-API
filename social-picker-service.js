@@ -238,3 +238,5 @@ http.createServer((req, res) => {
 	} else
 		return SendStatus(404);
 }).listen(PORT);
+
+if (DEV) process.stdout.write("\033c" + `Started dev instance on http://localhost:${PORT}\n`);

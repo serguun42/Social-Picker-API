@@ -18,14 +18,32 @@ const {
 const { CUSTOM_IMG_VIEWER_SERVICE } = (DEV ? require("../config/service.dev.json") : require("../config/service.json"));
 
 
+/**
+ * https://developer.twitter.com/en/portal/dashboard
+ * https://developer.twitter.com/en/docs/authentication/oauth-1-0a/obtaining-user-access-tokens
+ *
+ * App Key === API Key === Consumer API Key === Consumer Key === Customer Key === oauth_consumer_key
+ * App Key Secret === API Secret Key === Consumer Secret === Consumer Key === Customer Key === oauth_consumer_secret
+ * Access token === Token === resulting oauth_token
+ * Access token secret === Token Secret === resulting oauth_token_secret
+ */
+/** @type {import("twitter-lite").TwitterOptions} */
+const TWITTER_CLIENT_CONFIG = {
+	version: "2",
+	extension: false,
+	consumer_key: TWITTER_OAUTH.consumer_key,
+	consumer_secret: TWITTER_OAUTH.consumer_secret,
+	access_token_key: TWITTER_OAUTH.access_token_key,
+	access_token_secret: TWITTER_OAUTH.access_token_secret,
+};
+
 /** @type {import("twitter-lite").default} */
-const TwitterInstance = new TwitterLite(TWITTER_OAUTH);
+const TwitterClient = new TwitterLite(TWITTER_CLIENT_CONFIG);
 
 const TumblrClient = TumblrJS.createClient({
 	credentials: TUMBLR_OAUTH,
 	returnPromises: true
 });
-
 
 
 /**
@@ -34,84 +52,68 @@ const TumblrClient = TumblrJS.createClient({
  */
 const Twitter = (url) => {
 	const statusID = url.pathname.match(/^(?:\/[\w_]+)?\/status(?:es)?\/(\d+)/)?.[1];
-
 	if (!statusID) return Promise.resolve({});
 
-
-	return TwitterInstance.get("statuses/show", {
-		id: statusID,
-		tweet_mode: "extended"
+	/**
+	 * https://developer.twitter.com/en/docs/twitter-api/migrate/twitter-api-endpoint-map
+	 * https://developer.twitter.com/en/docs/twitter-api/tweets/lookup/api-reference/get-tweets-id
+	 */
+	return TwitterClient.get(`tweets/${statusID}`, {
+		"expansions": ["author_id", "attachments.media_keys"].join(","),
+		"tweet.fields": ["text", "entities"].join(","),
+		"user.fields": ["id", "name", "username"].join(","),
+		"media.fields": ["media_key", "type", "url", "width", "height", "variants"].join(","),
 	})
-	.then(/** @param {import("../types/tweet").Tweet} tweet */ (tweet) => {
-		const medias = tweet.extended_entities?.media;
-		if (!medias?.length) return Promise.resolve({});
+	.then(/** @param {import("../types/twitter-v2").TwitterV2} twitterResponse */ (twitterResponse) => {
+		const tweetId = twitterResponse.data?.id;
+		if (!tweetId) return Promise.reject(new Error(`No tweet ID in twitterResponse`));
 
-		let sendingMessageText = tweet.full_text || "";
+		const trimmedText = (twitterResponse.data.text || "")
+			.replace(/\s?(?:https?:\/\/)?t.co\/\w+$/gi, "")
+			.replace(/\s+/gi, " ")
+			.trim();
 
-		tweet.entities?.urls?.forEach((link) =>
-			sendingMessageText = sendingMessageText.replace(new RegExp(link.url, "gi"), link.expanded_url)
+		const caption = (twitterResponse.data.entities?.urls?.length
+			? twitterResponse.data.entities.urls.reduce(
+				(accumText, urlEntity) => accumText.replace(
+					urlEntity.url,
+					SafeParseURL(urlEntity.expanded_url).pathname.includes(`status/${tweetId}`)
+						? ""
+						: urlEntity.expanded_url
+				),
+				trimmedText
+			).replace(/\s+/gi, " ").trim()
+			: trimmedText);
+
+		const user = (twitterResponse.includes?.users || []).find((user) =>
+			user.id === twitterResponse.data.author_id
 		);
-
-		sendingMessageText = sendingMessageText
-								.replace(/\b(http(s)?\:\/\/)?t.co\/[\w\d_]+\b$/gi, "")
-								.replace(/(\s)+/gi, "$1")
-								.trim();
-
 
 		/** @type {import("../types").SocialPost} */
 		const socialPost = {
-			caption: sendingMessageText,
-			postURL: url.href,
-			author: tweet.user?.name,
-			authorURL: `https://twitter.com/${tweet.user?.screen_name}`
-		}
+			caption,
+			author: user?.name,
+			authorURL: `https://twitter.com/${user?.username}`,
+			postURL: `https://twitter.com/${user?.username}/status/${tweetId}`,
+			medias: (twitterResponse.includes?.media || [])
+				.filter((tweetMedium) => twitterResponse.data.attachments?.media_keys?.includes(tweetMedium.media_key))
+				.map((tweetMedium) => {
+					if (tweetMedium.type === "photo")
+						return { type: "photo", externalUrl: `${tweetMedium.url}:orig` };
 
+					if (tweetMedium.type === "video" || tweetMedium.type === "animated_gif") {
+						const bestVariant = tweetMedium.variants.sort((prev, next) =>
+							prev.bit_rate - next.bit_rate
+						).pop();
 
-		if (medias[0]["type"] === "animated_gif") {
-			const variants = medias[0]["video_info"]["variants"].filter(i => (!!i && i.hasOwnProperty("bitrate")));
+						if (!bestVariant?.url) return null;
+						return { type: "video", externalUrl: bestVariant.url };
+					}
 
-			if (!variants || !variants.length) return false;
-
-			let best = variants[0];
-
-			variants.forEach((variant) => {
-				if (variant.bitrate > best.bitrate)
-					best = variant;
-			});
-
-			socialPost.medias = [
-				{
-					type: "gif",
-					externalUrl: best["url"]
-				}
-			];
-		} else if (medias[0]["type"] === "video") {
-			const variants = medias[0]["video_info"]["variants"].filter(i => (!!i && i.hasOwnProperty("bitrate")));
-
-			if (!variants || !variants.length) return false;
-
-			let best = variants[0];
-
-			variants.forEach((variant) => {
-				if (variant.bitrate > best.bitrate)
-					best = variant;
-			});
-
-			socialPost.medias = [
-				{
-					type: "video",
-					externalUrl: best["url"]
-				}
-			];
-		} else {
-			socialPost.medias = medias.map((media) => {
-				if (media["type"] === "photo")
-					return { type: "photo", externalUrl: media["media_url_https"] + ":orig" };
-
-				return false;
-			}).filter(media => !!media);
-		}
-
+					return null;
+				})
+				.filter(Boolean)
+		};
 
 		return Promise.resolve(socialPost);
 	});
@@ -149,7 +151,7 @@ const Instagram = (url) => {
 	if (!PATH_REGEXP.test(url.pathname)) return;
 
 
-	return NodeFetch(`https://${url.hostname}${url.pathname}?__a=1`, {
+	return NodeFetch(`https://${url.hostname}${url.pathname}?__a=1&__d=dis`, {
 		"headers": {
 			"accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
 			"accept-language": "en-US,en;q=0.9,ru;q=0.8",
@@ -1056,14 +1058,14 @@ const Osnova = (url) => {
 	const siteHostname = url.hostname.replace(/^.*\.(\w+\.\w+)$/, "$1").replace("the.tj", "tjournal.ru");
 
 	const isUser = /^\/u/i.test(url.pathname);
-	const postID = (isUser ? 
+	const postID = (isUser ?
 		url.pathname.match(/^\/u\/\d+[\w\-]+\/(?<postID>\d+)/)
 		:
 		url.pathname.match(/^(?:(?:\/s)?\/[\w\-]+)?\/(?<postID>\d+)/)
 	)?.groups?.["postID"];
 
 	if (!postID) return Promise.resolve(null);
-	
+
 	return NodeFetch(`https://api.${siteHostname}/v1.9/entry/${postID}`)
 	.then((res) => {
 		if (res.status === 200)
@@ -1114,7 +1116,7 @@ const Osnova = (url) => {
 				return Promise.resolve([]);
 			});
 		}
-		
+
 
 		osnovaPost.blocks.forEach((block) => {
 			if (block.type === "tweet")
