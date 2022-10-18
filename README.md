@@ -28,9 +28,9 @@ After launching you can access Picker with fetching it like `curl http://localho
 - _Twitter's direct images_ – from _twimg.com_
 - _Nitter_ – Twitter clone
 - _Instagram_ – images, videos including posts with multiple ones
-- _Pixiv_ – images. Uses external service for end-user viewing of hi-res images due to Referer Header issues.
+- _Pixiv_ – images and _Ugoira_-gifs. Uses external service for end-user viewing of hi-res images due to Referer Header issues. Uses [`ugoira-builder`](./util/ugoira-builder.js) for creating mp4 video from Ugoira zip with images
 - _Pixiv's direct images_ – from _pximg.net_
-- _Reddit_ – images, videos and gifs including posts with multiple ones. Uses [`combine-video`](./util/combine-video.js) for joining audio- and video-streams via `ffmpeg`
+- _Reddit_ – images, videos and gifs including posts with multiple ones. Uses [`video-audio-merge`](./util/video-audio-merge.js) for joining audio- and video-streams via `ffmpeg`
 - _Youtube_ – videos with only video streams, only audio streams and both
 - _Osnova_ – images extracted from post
 - _Tumblr_ – images and galeries

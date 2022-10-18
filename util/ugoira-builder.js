@@ -1,0 +1,110 @@
+import { exec } from 'child_process';
+import { createHash } from 'crypto';
+import { resolve } from 'path';
+import { unlink, writeFile } from 'fs/promises';
+import JSZip from 'jszip';
+import LogMessageOrError from './log.js';
+
+const TEMP_FOLDER = process.env.TEMP || '/tmp/';
+/** @type {Partial<import('../types/media-post').UgoiraBuilt>} */
+const UGOIRA_BUILT_DEFAULT = {
+  type: 'video',
+  filetype: 'mp4',
+};
+
+/**
+ * Builds video sequence from Ugoira
+ * @param {import('../types/pixiv-ugoira-meta').UgoiraMeta} ugoiraMeta
+ * @param {ArrayBuffer} sourceZip
+ * @returns {Promise<import('../types/media-post').UgoiraBuilt>}
+ */
+const UgoiraBuilder = (ugoiraMeta, sourceZip) =>
+  new JSZip()
+    .loadAsync(sourceZip)
+    .then(async (zipAsObject) => {
+      /** @type {{ [filename: string]: number }} */
+      const ugoiraDelays = {};
+      ugoiraMeta.body.frames.forEach((frame) => {
+        ugoiraDelays[frame.file] = frame.delay;
+      });
+
+      const hash = createHash('md5').update(`${ugoiraMeta.body.originalSrc}_${Date.now()}`).digest('hex');
+      const outputFilename = `socialpicker_${hash}_output.${UGOIRA_BUILT_DEFAULT.filetype}`;
+      const outputFilepath = resolve(TEMP_FOLDER, outputFilename);
+
+      /** @type {{ filename: string, tempFilename: string, tempFilepath: string }[]} */
+      const storedFiles = [];
+
+      // eslint-disable-next-line no-restricted-syntax, guard-for-in
+      for (const filename in zipAsObject.files) {
+        const fileAsObject = zipAsObject.files[filename];
+        const tempFilename = `socialpicker_${hash}_${filename.replace(/[^\w.]/g, '')}`;
+        const tempFilepath = resolve(TEMP_FOLDER, tempFilename);
+
+        // eslint-disable-next-line no-await-in-loop
+        const unzipWriteResult = await fileAsObject
+          .async('nodebuffer')
+          .then((fileAsBuffer) => writeFile(tempFilepath, fileAsBuffer))
+          .catch((e) => Promise.resolve(new Error(`Cannot unzip/write file ${filename}: ${e}`)));
+
+        if (unzipWriteResult instanceof Error) throw unzipWriteResult;
+
+        storedFiles.push({ filename, tempFilename, tempFilepath });
+      }
+
+      const listFilename = `socialpicker_${hash}_list.txt`;
+      const listFilepath = resolve(TEMP_FOLDER, listFilename);
+      const listContent = storedFiles
+        .map(
+          (storedFile) =>
+            `file '${storedFile.tempFilename}'\nduration ${((ugoiraDelays[storedFile.filename] || 100) / 1000).toFixed(
+              3
+            )}`
+        )
+        .join('\n');
+
+      return (
+        writeFile(listFilepath, listContent)
+          // eslint-disable-next-line new-cap
+          .then(
+            () =>
+              new Promise((ffmpegResolve, ffmpegReject) => {
+                const ffmpegProcess = exec(
+                  `ffmpeg -f concat -i "${listFilename}" -vf format=yuv420p "${outputFilename}"`,
+                  { cwd: TEMP_FOLDER },
+                  (error, _stdout, stderr) => {
+                    // if (timeout) clearTimeout(timeout);
+
+                    if (error || stderr) {
+                      ffmpegProcess.kill();
+                      ffmpegReject(error || new Error(stderr));
+                    }
+                  }
+                );
+
+                ffmpegProcess.on('error', (e) => ffmpegReject(e));
+                ffmpegProcess.on('exit', () => ffmpegResolve());
+              })
+          )
+          .then(() => {
+            unlink(listFilepath).catch(() => {});
+            storedFiles.forEach((storedFile) => unlink(storedFile.tempFilepath).catch(() => {}));
+
+            /** @type {import('../types/media-post').UgoiraBuilt} */
+            const ugoiraBuilt = {
+              ...UGOIRA_BUILT_DEFAULT,
+              externalUrl: ugoiraMeta.body.originalSrc,
+              original: ugoiraMeta.body.originalSrc,
+              filename: outputFilepath,
+              fileCallback: () => {
+                unlink(outputFilepath).catch(() => {});
+              },
+            };
+
+            return Promise.resolve(ugoiraBuilt);
+          })
+      );
+    })
+    .catch((e) => LogMessageOrError('UgoiraBuilder error:', e));
+
+export default UgoiraBuilder;

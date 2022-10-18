@@ -23,11 +23,30 @@ export type SocialPost = {
   medias: Media[];
 };
 
-export type CombinedVideoResult = {
+export type VideoAudioMerged =
+  | { externalUrl: string }
+  | {
+      filename: string;
+      fileCallback: () => void;
+      videoSource: string;
+      audioSource: string;
+    };
+
+export type UgoiraBuilt = {
+  /**
+   * @constant
+   * @default "video"
+   */
+  type: string;
+  /** Link to Ugoira zip */
   externalUrl: string;
-} & {
+  /** Link to Ugoira zip */
+  original: string;
   filename: string;
+  /**
+   * @constant
+   * @default "mp4"
+   */
+  filetype: string;
   fileCallback: () => void;
-  videoSource: string;
-  audioSource: string;
 };

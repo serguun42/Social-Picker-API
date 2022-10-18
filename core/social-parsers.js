@@ -3,10 +3,11 @@ import TwitterLite from 'twitter-lite';
 import { createClient } from 'tumblr.js';
 import YTDlpWrap from 'yt-dlp-wrap';
 import { parse as parseHTML } from 'node-html-parser';
-import CombineVideo from '../util/combine-video.js';
+import VideoAudioMerge from '../util/video-audio-merge.js';
 import { SafeParseURL, ParseQuery, ParsePath } from '../util/urls.js';
 import LogMessageOrError from '../util/log.js';
 import { LoadServiceConfig, LoadTokensConfig } from '../util/load-configs.js';
+import UgoiraBuilder from '../util/ugoira-builder.js';
 
 const { CUSTOM_IMG_VIEWER_SERVICE } = LoadServiceConfig();
 const { TWITTER_OAUTH, INSTAGRAM_COOKIE, TUMBLR_OAUTH } = LoadTokensConfig();
@@ -173,7 +174,7 @@ const Instagram = (url) => {
   })
     .then((res) => {
       if (res.ok) return res.json();
-      return Promise.reject(new Error(`Status code = ${res.status} ${res.statusText}. URL = ${url.href}`));
+      return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
     })
     .then((graphData) => {
       const post = graphData?.items?.[0];
@@ -240,78 +241,118 @@ const Instagram = (url) => {
  */
 const Pixiv = (url, certainImageIndex) => {
   const PIXIV_PAGE_RX = /^\/(?:\w{2}\/)?artworks\/(?<illustId>\d+)/i;
+  /** @type {import('node-fetch').HeadersInit} */
+  const PIXIV_DEFAULT_HEADERS = {
+    referer: 'https://www.pixiv.net/',
+  };
 
   const pageMatch = url.pathname.match(PIXIV_PAGE_RX);
+  /** @type {string} */
   const illustId = pageMatch?.groups?.illustId || ParseQuery(url.search).illust_id;
   if (!illustId) return Promise.resolve({});
 
   const postURL = `https://www.pixiv.net/en/artworks/${illustId}`;
 
-  return fetch(postURL)
+  return fetch(postURL, { headers: PIXIV_DEFAULT_HEADERS })
     .then((res) => {
       if (res.ok) return res.text();
-      return Promise.reject(new Error(`Status code = ${res.status} ${res.statusText}. URL = ${postURL}`));
+      return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
     })
-    .then((rawPixivHTML) => {
-      let data;
+    .then((pixivPage) => {
       try {
-        rawPixivHTML = rawPixivHTML
-          .split(`id="meta-preload-data"`)[1]
-          .split('</head')[0]
-          .trim()
-          .replace(/^content=('|")/i, '')
-          .split(/('|")>/)[0]
-          .replace(/('|")>$/i, '')
-          .trim();
+        const parsedHTML = parseHTML(pixivPage);
 
-        data = JSON.parse(rawPixivHTML);
+        const metaPreloadData = parsedHTML.getElementById('meta-preload-data');
+        if (!metaPreloadData) throw new Error('No <metaPreloadData> in <pixivPage>');
+
+        const preloadContentRaw = metaPreloadData.getAttribute('content');
+        if (!preloadContentRaw) throw new Error('No <preloadContent> in <metaPreloadData>');
+
+        const preloadContentParsed = JSON.parse(preloadContentRaw);
+        return Promise.resolve(preloadContentParsed);
       } catch (e) {
-        return Promise.reject(new Error(`Cannot parse data from Pixiv: ${e}`));
+        return Promise.reject(e);
       }
+    })
+    .then(
+      /** @param {import("../types/pixiv-preload").PixivPreload} pixivPreload */ (pixivPreload) => {
+        const post = pixivPreload?.illust?.[illustId];
+        if (!post) return Promise.reject(new Error(`No <post> in preloadContent: ${postURL}`));
 
-      const post = data?.illust?.[Object.keys(data.illust)[0]];
+        /** @type {import("../types/media-post").SocialPost} */
+        const socialPost = {
+          caption: post.title || post.illustTitle || post.description || post.illustComment,
+          author: post.userName,
+          authorURL: `https://www.pixiv.net/en/users/${post.userId}`,
+          postURL,
+          medias: [],
+        };
 
-      /** @type {number} */
-      const sourcesAmount = post?.pageCount;
+        /**
+         * Aka GIF stored as jpg/png in zip
+         * @type {boolean}
+         */
+        const isUgoira =
+          Object.keys(post.urls || {})
+            .map((key) => post.urls[key] || '')
+            .some((firstImgUrl) => typeof firstImgUrl === 'string' && /ugoira/i.test(firstImgUrl)) ||
+          post.tags?.tags?.some((tag) => /ugoira/i.test(tag.romaji));
 
-      /** @type {import("../types/media-post").Media[]} */
-      const medias = [];
+        if (isUgoira) {
+          const ugoiraMetaUrl = `https://www.pixiv.net/ajax/illust/${illustId}/ugoira_meta`;
 
-      if (!post) return Promise.resolve(new Error('No Pivix post', rawPixivHTML));
+          return fetch(ugoiraMetaUrl, { headers: PIXIV_DEFAULT_HEADERS })
+            .then((res) => {
+              if (res.ok) return res.json();
+              return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
+            })
+            .then(
+              /** @param {import('../types/pixiv-ugoira-meta').UgoiraMeta} ugoiraMeta */ (ugoiraMeta) => {
+                const uroiraOriginalZip = ugoiraMeta.body.originalSrc;
+                return fetch(uroiraOriginalZip, { headers: PIXIV_DEFAULT_HEADERS })
+                  .then((res) => {
+                    if (res.ok) return res.arrayBuffer();
+                    return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
+                  })
+                  .then((ugoiraSourceZip) => UgoiraBuilder(ugoiraMeta, ugoiraSourceZip))
+                  .then((ugoiraBuilt) => {
+                    socialPost.medias.push({ ...ugoiraBuilt });
+                    return Promise.resolve(socialPost);
+                  });
+              }
+            );
+        }
 
-      for (let i = 0; i < sourcesAmount; i++) {
-        const origFilename = post.urls.original;
-        const origBasename = origFilename.replace(/\d+\.([\w\d]+)$/i, '');
-        let origFiletype = origFilename.match(/\.([\w\d]+)$/i);
+        const sourcesAmount = post?.pageCount;
 
-        // eslint-disable-next-line prefer-destructuring
-        if (origFiletype && origFiletype[1]) origFiletype = origFiletype[1];
-        else origFiletype = 'png';
+        for (let i = 0; i < sourcesAmount; i++) {
+          const origFilename = post.urls.original;
+          const origBasename = origFilename.replace(/\d+\.([\w\d]+)$/i, '');
+          let origFiletype = origFilename.match(/\.([\w\d]+)$/i);
 
-        const masterFilename = post.urls.regular;
+          // eslint-disable-next-line prefer-destructuring
+          if (origFiletype && origFiletype[1]) origFiletype = origFiletype[1];
+          else origFiletype = 'png';
 
-        if (!(typeof certainImageIndex === 'number' && certainImageIndex !== i))
-          medias.push({
-            type: 'photo',
-            externalUrl: CUSTOM_IMG_VIEWER_SERVICE.replace(
-              /__LINK__/,
-              encodeURI(masterFilename.replace(/\d+(_master\d+\.[\w\d]+$)/i, `${i}$1`))
-            ).replace(/__HEADERS__/, encodeURIComponent(JSON.stringify({ referer: 'https://www.pixiv.net/' }))),
-            original: CUSTOM_IMG_VIEWER_SERVICE.replace(
-              /__LINK__/,
-              encodeURI(`${origBasename + i}.${origFiletype}`)
-            ).replace(/__HEADERS__/, encodeURIComponent(JSON.stringify({ referer: 'https://www.pixiv.net/' }))),
-          });
+          const masterFilename = post.urls.regular;
+
+          if (!(typeof certainImageIndex === 'number' && certainImageIndex !== i))
+            socialPost.medias.push({
+              type: 'photo',
+              externalUrl: CUSTOM_IMG_VIEWER_SERVICE.replace(
+                /__LINK__/,
+                encodeURI(masterFilename.replace(/\d+(_master\d+\.[\w\d]+$)/i, `${i}$1`))
+              ).replace(/__HEADERS__/, encodeURIComponent(JSON.stringify({ referer: 'https://www.pixiv.net/' }))),
+              original: CUSTOM_IMG_VIEWER_SERVICE.replace(
+                /__LINK__/,
+                encodeURI(`${origBasename + i}.${origFiletype}`)
+              ).replace(/__HEADERS__/, encodeURIComponent(JSON.stringify({ referer: 'https://www.pixiv.net/' }))),
+            });
+        }
+
+        return Promise.resolve(socialPost);
       }
-
-      return Promise.resolve({
-        caption: post.title || post.illustTitle || post.description || post.illustComment,
-        author: post.userName,
-        authorURL: `https://www.pixiv.net/en/users/${post.userId}`,
-        postURL,
-        medias,
-      });
-    });
+    );
 };
 
 /**
@@ -379,7 +420,7 @@ const Reddit = (url) => {
   return fetch(postJSON, { headers: DEFAULT_REDDIT_HEADERS })
     .then((res) => {
       if (res.ok) return res.json();
-      return Promise.reject(new Error(`Status code = ${res.status} ${res.statusText}. URL = ${url.href}`));
+      return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
     })
     .then((redditPostData) => {
       const post = redditPostData[0]?.data?.children?.[0]?.data;
@@ -442,31 +483,29 @@ const Reddit = (url) => {
                   const audio = audioFilename.trim() ? hslPlaylist.replace(/\/[^/]+$/, `/${audioFilename}`) : '';
                   if (!audio) return Promise.resolve({ externalUrl: video });
 
-                  return CombineVideo(video, audio).catch(() => Promise.resolve({ externalUrl: video }));
+                  return VideoAudioMerge(video, audio).catch(() => Promise.resolve({ externalUrl: video }));
                 })
                 .catch(() => Promise.resolve({ externalUrl: video }))
         ).then(
-          /** @param {import('../types/media-post').CombinedVideoResult} videoResult */ (videoResult) => {
-            const { externalUrl, filename, fileCallback, videoSource, audioSource } = videoResult;
-
+          /** @param {import('../types/media-post').VideoAudioMerged} videoResult */ (videoResult) => {
             /** @type {import("../types/media-post").Media[]} */
             const videoSources = [];
 
-            if (filename)
+            if ('externalUrl' in videoResult)
               videoSources.push({
-                type: isGif && !audioSource ? 'gif' : 'video',
-                otherSources: {
-                  audioSource,
-                  videoSource,
-                },
-                filename,
-                filetype: SafeParseURL(videoSource).pathname?.split('.').pop(),
-                fileCallback,
-              });
-            else if (externalUrl)
-              videoSources.push({
-                externalUrl,
+                externalUrl: videoResult.externalUrl,
                 type: isGif ? 'gif' : 'video',
+              });
+            else if ('filename' in videoResult)
+              videoSources.push({
+                type: isGif && !videoResult.audioSource ? 'gif' : 'video',
+                otherSources: {
+                  audioSource: videoResult.audioSource,
+                  videoSource: videoResult.videoSource,
+                },
+                filename: videoResult.filename,
+                filetype: SafeParseURL(videoResult.videoSource).pathname?.split('.').pop(),
+                fileCallback: videoResult.fileCallback,
               });
 
             return Promise.resolve({
@@ -599,7 +638,7 @@ const Danbooru = (url) =>
   fetch(url.href)
     .then((res) => {
       if (res.ok) return res.text();
-      return Promise.reject(new Error(`Status code = ${res.status} ${res.statusText}. URL = ${url.href}`));
+      return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
     })
     .then((danbooruPage) => {
       /** @type {import("../types/media-post").SocialPost} */
@@ -645,7 +684,7 @@ const Gelbooru = (url) =>
   fetch(url.href)
     .then((res) => {
       if (res.ok) return res.text();
-      return Promise.reject(new Error(`Status code = ${res.status} ${res.statusText}. URL = ${url.href}`));
+      return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
     })
     .then((gelbooruPage) => {
       try {
@@ -685,7 +724,7 @@ const Konachan = (url) =>
   fetch(url.href)
     .then((res) => {
       if (res.ok) return res.text();
-      return Promise.reject(new Error(`Status code = ${res.status} ${res.statusText}. URL = ${url.href}`));
+      return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
     })
     .then((konachanPage) => {
       let source = '';
@@ -726,7 +765,7 @@ const Yandere = (url) =>
   fetch(url.href)
     .then((res) => {
       if (res.ok) return res.text();
-      return Promise.reject(new Error(`Status code = ${res.status} ${res.statusText}. URL = ${url.href}`));
+      return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
     })
     .then((yanderePage) => {
       let source = '';
@@ -764,7 +803,7 @@ const Eshuushuu = (url) =>
   fetch(url.href)
     .then((res) => {
       if (res.ok) return res.text();
-      return Promise.reject(new Error(`Status code = ${res.status} ${res.statusText}. URL = ${url.href}`));
+      return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
     })
     .then((eshuushuuPage) => {
       let source = '';
@@ -802,7 +841,7 @@ const Sankaku = (url) =>
   fetch(url.href)
     .then((res) => {
       if (res.ok) return res.text();
-      return Promise.reject(new Error(`Status code = ${res.status} ${res.statusText}. URL = ${url.href}`));
+      return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
     })
     .then((sankakuPage) => {
       let source = '';
@@ -840,7 +879,7 @@ const Zerochan = (url) =>
   fetch(url.href)
     .then((res) => {
       if (res.ok) return res.text();
-      return Promise.reject(new Error(`Status code = ${res.status} ${res.statusText}. URL = ${url.href}`));
+      return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
     })
     .then((zerochanPage) => {
       let source = '';
@@ -892,7 +931,7 @@ const AnimePictures = (url) =>
   fetch(url.href)
     .then((res) => {
       if (res.ok) return res.text();
-      return Promise.reject(new Error(`Status code = ${res.status} ${res.statusText}. URL = ${url.href}`));
+      return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
     })
     .then((animePicturesPage) => {
       try {
@@ -933,7 +972,7 @@ const KemonoParty = (url) => {
   return fetch(postURL)
     .then((res) => {
       if (res.ok) return res.text();
-      return Promise.reject(new Error(`Status code = ${res.status} ${res.statusText}. URL = ${url.href}`));
+      return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
     })
     .then((kemonoPartyPage) => {
       /** @type {import("../types/media-post").SocialPost} */
@@ -1115,7 +1154,7 @@ const Osnova = (url) => {
           if (response.result) return Promise.resolve(response.result);
           return Promise.reject(new Error('No <result> in Osnova API response'));
         });
-      return Promise.reject(new Error(`Status code = ${res.status} ${res.statusText}. URL = ${url.href}`));
+      return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
     })
     .then(
       /** @param {import("../types/osnova").OsnovaPost} osnovaPost */ (osnovaPost) => {

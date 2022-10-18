@@ -15,7 +15,7 @@ const TEMP_FOLDER = process.env.TEMP || '/tmp/';
  * @param {string} audio
  * @returns {Promise<import('../types/media-post').CombinedVideoResult>}
  */
-const CombineVideo = (video, audio) => {
+const VideoAudioMerge = (video, audio) => {
   if (!video) return Promise.reject(new Error('No video URL'));
   if (!audio) return Promise.resolve({ externalUrl: video });
 
@@ -47,13 +47,13 @@ const CombineVideo = (video, audio) => {
     })
     .then(() => new ffmpeg(videoFilename))
     .then(
-      (ffmpegVideo) =>
+      (ffmpegInstance) =>
         new Promise((resolve, reject) => {
-          ffmpegVideo.addInput(audioFilename);
-          ffmpegVideo.addCommand('-c:v', 'copy');
-          ffmpegVideo.addCommand('-c:a', 'aac');
-          ffmpegVideo.addCommand('-qscale', '0');
-          ffmpegVideo.save(outFilename, (e) => {
+          ffmpegInstance.addInput(audioFilename);
+          ffmpegInstance.addCommand('-c:v', 'copy');
+          ffmpegInstance.addCommand('-c:a', 'aac');
+          ffmpegInstance.addCommand('-qscale', '0');
+          ffmpegInstance.save(outFilename, (e) => {
             if (e) {
               reject(e);
               return;
@@ -75,4 +75,4 @@ const CombineVideo = (video, audio) => {
     });
 };
 
-export default CombineVideo;
+export default VideoAudioMerge;
