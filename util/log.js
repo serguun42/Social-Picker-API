@@ -1,19 +1,22 @@
-const DEV = require("./is-dev");
-const { writeFile } = require("fs/promises");
+/* eslint-disable no-console */
+import { writeFile } from 'fs/promises';
+import IS_DEV from './is-dev.js';
 
 /**
  * @param  {(string | Error)[]} args
  * @returns {void}
  */
 const LogMessageOrError = (...args) => {
-	const containsAnyError = (args.findIndex((message) => message instanceof Error) > -1);
-	const out = (containsAnyError ? console.error : console.log);
+  const containsError = args.some(
+    (message) => message instanceof Error || (typeof message === 'string' && /test/i.test(message))
+  );
+  const out = containsError ? console.error : console.log;
 
-	out(new Date());
-	out(...args);
-	out("~~~~~~~~~~~\n\n");
+  out(new Date());
+  out(...args);
+  out(Array.from({ length: 30 }, () => '~').join(''));
 
-	if (DEV) writeFile("./out/logmessageorerror.json", JSON.stringify(args, false, "\t")).catch(console.warn);
+  if (IS_DEV) writeFile('./out/logmessageorerror.json', JSON.stringify(args, false, '\t')).catch(console.warn);
 };
 
-module.exports = LogMessageOrError;
+export default LogMessageOrError;

@@ -6,3 +6,5 @@ package-lock.json
 *.bat
 *.sh
 *.dev.*
+!nodemon.dev.json
+tsconfig.json
