@@ -424,17 +424,18 @@ const Reddit = (url) => {
     })
     .then((redditPostData) => {
       const post = redditPostData[0]?.data?.children?.[0]?.data;
+      if (!post) return Promise.reject(new Error('No <post> in <redditPostData>'));
+
       const caption = post?.title;
       const author = post?.author;
       const authorURL = `https://www.reddit.com/u/${author || 'me'}`;
+      const imageURL = post?.url || post?.url_overridden_by_dest;
       const isVideo = post?.is_video;
+      const isGif = post?.secure_media?.reddit_video?.is_gif ?? /\.gif$/i.test(imageURL);
       const isGallery = post?.is_gallery;
-
-      if (!post) return Promise.reject(new Error('No post in .json-data'));
 
       if (isVideo) {
         const video = post?.secure_media?.reddit_video?.fallback_url;
-        const isGif = post?.secure_media?.reddit_video?.is_gif;
         const hslPlaylist = post?.secure_media?.reddit_video?.hls_url;
 
         if (!video) return Promise.reject(new Error('Reddit no video'));
@@ -504,7 +505,7 @@ const Reddit = (url) => {
                   videoSource: videoResult.videoSource,
                 },
                 filename: videoResult.filename,
-                filetype: SafeParseURL(videoResult.videoSource).pathname?.split('.').pop(),
+                filetype: SafeParseURL(videoResult.videoSource).pathname.split('.').pop(),
                 fileCallback: videoResult.fileCallback,
               });
 
@@ -524,9 +525,9 @@ const Reddit = (url) => {
         const galleryMedias = (post?.gallery_data?.items || [])
           .map(
             /** @return {import("../types/media-post").Media} */ (item) => {
-              const isGif = !!post?.media_metadata?.[item.media_id]?.s?.gif;
+              const isItemGif = !!post?.media_metadata?.[item.media_id]?.s?.gif;
 
-              if (isGif)
+              if (isItemGif)
                 return {
                   type: 'gif',
                   externalUrl: post?.media_metadata?.[item.media_id]?.s?.gif,
@@ -554,9 +555,6 @@ const Reddit = (url) => {
           medias: galleryMedias,
         });
       }
-
-      const imageURL = post?.url || post?.url_overridden_by_dest;
-      const isGif = /\.gif$/i.test(imageURL);
 
       return Promise.resolve({
         author,

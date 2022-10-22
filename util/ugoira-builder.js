@@ -63,47 +63,42 @@ const UgoiraBuilder = (ugoiraMeta, sourceZip) =>
         )
         .join('\n');
 
-      return (
-        writeFile(listFilepath, listContent)
-          // eslint-disable-next-line new-cap
-          .then(
-            () =>
-              new Promise((ffmpegResolve, ffmpegReject) => {
-                const ffmpegProcess = exec(
-                  `ffmpeg -f concat -i "${listFilename}" -vf format=yuv420p "${outputFilename}"`,
-                  { cwd: TEMP_FOLDER },
-                  (error, _stdout, stderr) => {
-                    // if (timeout) clearTimeout(timeout);
-
-                    if (error || stderr) {
-                      ffmpegProcess.kill();
-                      ffmpegReject(error || new Error(stderr));
-                    }
+      return writeFile(listFilepath, listContent)
+        .then(
+          () =>
+            new Promise((ffmpegResolve, ffmpegReject) => {
+              const ffmpegProcess = exec(
+                `ffmpeg -f concat -i "${listFilename}" -vf format=yuv420p "${outputFilename}"`,
+                { cwd: TEMP_FOLDER },
+                (error, _stdout, stderr) => {
+                  if (error || stderr) {
+                    ffmpegProcess.kill();
+                    ffmpegReject(error || new Error(stderr));
                   }
-                );
+                }
+              );
 
-                ffmpegProcess.on('error', (e) => ffmpegReject(e));
-                ffmpegProcess.on('exit', () => ffmpegResolve());
-              })
-          )
-          .then(() => {
-            unlink(listFilepath).catch(() => {});
-            storedFiles.forEach((storedFile) => unlink(storedFile.tempFilepath).catch(() => {}));
+              ffmpegProcess.on('error', (e) => ffmpegReject(e));
+              ffmpegProcess.on('exit', () => ffmpegResolve());
+            })
+        )
+        .then(() => {
+          unlink(listFilepath).catch(() => {});
+          storedFiles.forEach((storedFile) => unlink(storedFile.tempFilepath).catch(() => {}));
 
-            /** @type {import('../types/media-post').UgoiraBuilt} */
-            const ugoiraBuilt = {
-              ...UGOIRA_BUILT_DEFAULT,
-              externalUrl: ugoiraMeta.body.originalSrc,
-              original: ugoiraMeta.body.originalSrc,
-              filename: outputFilepath,
-              fileCallback: () => {
-                unlink(outputFilepath).catch(() => {});
-              },
-            };
+          /** @type {import('../types/media-post').UgoiraBuilt} */
+          const ugoiraBuilt = {
+            ...UGOIRA_BUILT_DEFAULT,
+            externalUrl: ugoiraMeta.body.originalSrc,
+            original: ugoiraMeta.body.originalSrc,
+            filename: outputFilepath,
+            fileCallback: () => {
+              unlink(outputFilepath).catch(() => {});
+            },
+          };
 
-            return Promise.resolve(ugoiraBuilt);
-          })
-      );
+          return Promise.resolve(ugoiraBuilt);
+        });
     })
     .catch((e) => LogMessageOrError('UgoiraBuilder error:', e));
 
