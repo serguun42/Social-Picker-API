@@ -8,3 +8,4 @@ package-lock.json
 *.dev.*
 !nodemon.dev.json
 tsconfig.json
+types/post_version.d.ts

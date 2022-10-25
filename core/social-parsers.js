@@ -360,7 +360,7 @@ const Pixiv = (url, certainImageIndex) => {
  * @returns {Promise<import("../types/media-post").SocialPost>}
  */
 const PixivImg = (url) => {
-  const PIXIV_IMAGE_RX = /^\/img-\w+\/img(\/\d+){6}\/(?<illustId>\d+)_p(?<imageIndex>\d+)+(?:_\w+)?\.\w+$/;
+  const PIXIV_IMAGE_RX = /\/(?<illustId>\d+)_p(?<imageIndex>\d+)(?:_\w+)?\.\w+$/;
   const imageMatch = url.pathname.match(PIXIV_IMAGE_RX);
   if (!Object.keys(imageMatch?.groups || {}).length) {
     LogMessageOrError(new Error(`Bad Pixiv image url: ${url.href}`));
@@ -1155,7 +1155,7 @@ const Osnova = (url) => {
       return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
     })
     .then(
-      /** @param {import("../types/osnova").OsnovaPost} osnovaPost */ (osnovaPost) => {
+      /** @param {import("../types/osnova-post").OsnovaPost} osnovaPost */ (osnovaPost) => {
         /** @type {import("../types/media-post").SocialPost} */
         const socialPost = {
           author: osnovaPost.author.name,
@@ -1210,13 +1210,13 @@ const Osnova = (url) => {
             block.data.items.forEach((media) => {
               if (!media.image) return;
 
-              const isImage =
-                media.image.data.type === 'jpg' || media.image.data.type === 'jpeg' || media.image.data.type === 'png';
+              const isImage = media.image.data.type !== 'gif';
+              const isWebp = media.image.data.type === 'webp';
 
               socialPost.medias.push({
                 type: isImage ? 'photo' : 'video',
                 externalUrl: `https://leonardo.osnova.io/${media.image.data.uuid}/${
-                  isImage ? '-/preview/1000/' : '-/format/mp4/'
+                  isImage ? `-/preview/1000/${isWebp ? '-/format/jpeg/' : ''}` : '-/format/mp4/'
                 }`,
                 original: `https://leonardo.osnova.io/${media.image.data.uuid}`,
               });
