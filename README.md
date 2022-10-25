@@ -25,15 +25,15 @@ After launching you can access Picker with fetching it like `curl http://localho
 ### List of platforms
 
 - _Twitter_ – images, videos and gifs
-- _Twitter's direct images_ – from _twimg.com_
+- _Twitter's direct media_ – from `*.twimg.com`
 - _Nitter_ – Twitter clone
-- _Instagram_ – images, videos including posts with multiple ones
-- _Pixiv_ – images and _Ugoira_-gifs. Uses external service for end-user viewing of hi-res images due to Referer Header issues. Uses [`ugoira-builder`](./util/ugoira-builder.js) for creating mp4 video from Ugoira zip with images
-- _Pixiv's direct images_ – from _pximg.net_
-- _Reddit_ – images, videos and gifs including posts with multiple ones. Uses [`video-audio-merge`](./util/video-audio-merge.js) for joining audio- and video-streams via `ffmpeg`
-- _Youtube_ – videos with only video streams, only audio streams and both
-- _Osnova_ – images extracted from post
-- _Tumblr_ – images and galeries
+- _Instagram_ – images, videos and galleries
+- _Pixiv_ – images and _Ugoira_-gifs. Uses external service for end-user viewing of high-res images due to Referer Header issues. Uses [`ugoira-builder`](./util/ugoira-builder.js) for creating mp4 video from Ugoira zip (via `ffmpeg`)
+- _Pixiv's direct images_ – from `*.pximg.net`
+- _Reddit_ – images, videos, gifs and galleries. Uses [`video-audio-merge`](./util/video-audio-merge.js) for merging separate streams (via `ffmpeg`)
+- _Youtube_ – video with response in [default type](./types/media-post.d.ts) containing all streams (via `yt-dlp`)
+- _Osnova_ – images, videos, gifs and galleries. Also extracts Twitter and Instagram blocks/links from within and handles them with parsers above
+- _Tumblr_ – images and galleries
 - _Danbooru_ – images
 - _Gelbooru_ – images
 - _Konachan_ – images

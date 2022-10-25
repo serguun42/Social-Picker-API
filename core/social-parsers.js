@@ -125,9 +125,27 @@ const Twitter = (url) => {
  * @param {URL} url
  * @returns {Promise<import("../types/media-post").SocialPost>}
  */
-const TwitterImg = (url) => {
+const TwitterDirect = (url) => {
+  if (url.hostname === 'video.twimg.com') {
+    url.search = '';
+
+    return Promise.resolve({
+      author: '',
+      authorURL: '',
+      caption: '',
+      postURL: encodeURI(url.href),
+      medias: [
+        {
+          type: 'video',
+          externalUrl: encodeURI(url.href),
+          original: encodeURI(url.href),
+        },
+      ],
+    });
+  }
+
   const format = ParseQuery(url.query)?.format || 'jpg';
-  const mediaPathname = url.pathname.replace(/:[\w\d]+$/, '').replace(/\.[\w\d]+$/, '');
+  const mediaPathname = url.pathname.replace(/:\w+$/, '').replace(/\.\w+$/, '');
 
   return Promise.resolve({
     author: '',
@@ -236,7 +254,7 @@ const Instagram = (url) => {
 
 /**
  * @param {URL} url
- * @param {number} [certainImageIndex] Unique parameter only for parser `PixivImg`
+ * @param {number} [certainImageIndex] Unique parameter only for parser `PixivDirect`
  * @returns {Promise<import("../types/media-post").SocialPost>}
  */
 const Pixiv = (url, certainImageIndex) => {
@@ -327,8 +345,8 @@ const Pixiv = (url, certainImageIndex) => {
 
         for (let i = 0; i < sourcesAmount; i++) {
           const origFilename = post.urls.original;
-          const origBasename = origFilename.replace(/\d+\.([\w\d]+)$/i, '');
-          let origFiletype = origFilename.match(/\.([\w\d]+)$/i);
+          const origBasename = origFilename.replace(/\d+\.(\w+)$/i, '');
+          let origFiletype = origFilename.match(/\.(\w+)$/i);
 
           // eslint-disable-next-line prefer-destructuring
           if (origFiletype && origFiletype[1]) origFiletype = origFiletype[1];
@@ -341,7 +359,7 @@ const Pixiv = (url, certainImageIndex) => {
               type: 'photo',
               externalUrl: CUSTOM_IMG_VIEWER_SERVICE.replace(
                 /__LINK__/,
-                encodeURI(masterFilename.replace(/\d+(_master\d+\.[\w\d]+$)/i, `${i}$1`))
+                encodeURI(masterFilename.replace(/\d+(_master\d+\.\w+$)/i, `${i}$1`))
               ).replace(/__HEADERS__/, encodeURIComponent(JSON.stringify({ referer: 'https://www.pixiv.net/' }))),
               original: CUSTOM_IMG_VIEWER_SERVICE.replace(
                 /__LINK__/,
@@ -359,7 +377,7 @@ const Pixiv = (url, certainImageIndex) => {
  * @param {URL} url
  * @returns {Promise<import("../types/media-post").SocialPost>}
  */
-const PixivImg = (url) => {
+const PixivDirect = (url) => {
   const PIXIV_IMAGE_RX = /\/(?<illustId>\d+)_p(?<imageIndex>\d+)(?:_\w+)?\.\w+$/;
   const imageMatch = url.pathname.match(PIXIV_IMAGE_RX);
   if (!Object.keys(imageMatch?.groups || {}).length) {
@@ -384,7 +402,7 @@ const PixivImg = (url) => {
 const Reddit = (url) => {
   if (!url.pathname) return Promise.resolve({});
 
-  const REDDIT_POST_REGEXP = /^(?<givenPathname>(?:\/r\/[\w\d-._]+)?\/comments\/[\w\d-.]+)(?:\/)?/i;
+  const REDDIT_POST_REGEXP = /^(?<givenPathname>(?:\/r\/[\w-._]+)?\/comments\/[\w-.]+)(?:\/)?/i;
   const match =
     url.hostname === 'redd.it'
       ? { groups: { givenPathname: `/comments${url.pathname}` } }
@@ -730,7 +748,7 @@ const Konachan = (url) =>
       try {
         source = konachanPage.split('<body')[1].match(
           // eslint-disable-next-line max-len
-          /<a(\s+[\w\d-]+="([^"]+)")*\s+href="([^"]+)"(\s+[\w\d-]+="([^"]+)")*\s+id="highres"(\s+[\w\d-]+="([^"]+)")*/i
+          /<a(\s+[\w-]+="([^"]+)")*\s+href="([^"]+)"(\s+[\w-]+="([^"]+)")*\s+id="highres"(\s+[\w-]+="([^"]+)")*/i
         );
 
         // eslint-disable-next-line prefer-destructuring
@@ -902,7 +920,7 @@ const Zerochan = (url) =>
 
       if (!source) return Promise.reject(new Error(['No Zerochan source', url.href]));
 
-      const sourceBasename = source.replace(/\.[\w\d]+$/, '');
+      const sourceBasename = source.replace(/\.\w+$/, '');
       const basenameMatch = zerochanPage.match(new RegExp(`${sourceBasename}.[\\w\\d]+`, 'gi'));
 
       if (basenameMatch && basenameMatch.pop) source = basenameMatch.pop();
@@ -1244,12 +1262,12 @@ const ALL_PARSERS = {
   Instagram,
   Konachan,
   Pixiv,
-  PixivImg,
+  PixivDirect,
   Reddit,
   Sankaku,
   Tumblr,
   Twitter,
-  TwitterImg,
+  TwitterDirect,
   Yandere,
   Zerochan,
   KemonoParty,

@@ -16,7 +16,8 @@ const CheckForLink = (givenURL) => {
     url.hostname === 'mobile.nitter.net'
   )
     return { status: true, platform: 'Twitter', url };
-  if (url.hostname === 'pbs.twimg.com') return { status: true, platform: 'TwitterImg', url };
+  if (url.hostname === 'pbs.twimg.com' || url.hostname === 'video.twimg.com')
+    return { status: true, platform: 'TwitterDirect', url };
   if (url.hostname === 'instagram.com' || url.hostname === 'www.instagram.com')
     return { status: true, platform: 'Instagram', url };
   if (
@@ -27,7 +28,7 @@ const CheckForLink = (givenURL) => {
   )
     return { status: true, platform: 'Reddit', url };
   if (url.hostname === 'pixiv.net' || url.hostname === 'www.pixiv.net') return { status: true, platform: 'Pixiv', url };
-  if (url.hostname === 'i.pximg.net') return { status: true, platform: 'PixivImg', url };
+  if (url.hostname === 'i.pximg.net') return { status: true, platform: 'PixivDirect', url };
   if (/tumblr\.(com|co\.\w+|org)$/i.test(url.hostname || '')) return { status: true, platform: 'Tumblr', url };
   if (url.hostname === 'danbooru.donmai.us') return { status: true, platform: 'Danbooru', url };
   if (url.hostname === 'gelbooru.com' || url.hostname === 'www.gelbooru.com')
