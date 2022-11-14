@@ -1,12 +1,14 @@
 export type Media = {
   type: 'photo' | 'gif' | 'video' | 'audio';
+  /** Link to default size external file */
   externalUrl: string;
+  /** Link to original size external file */
   original?: string;
-  /** Combined local copy of file. Later front and API identify file by `"filehash"` */
-  filename?: string;
+  otherSources?: { [otherSourceOriginKey: string]: string };
   /** File extension */
   filetype?: string;
-  otherSources?: { [otherSourceOriginKey: string]: string };
+  /** Combined local copy of file. Later front and API identify file by `"filehash"` */
+  filename?: string;
   /** Call it when done */
   fileCallback?: () => void;
   /** Media description e.g. youtube video quality or image size */
@@ -31,22 +33,3 @@ export type VideoAudioMerged =
       videoSource: string;
       audioSource: string;
     };
-
-export type UgoiraBuilt = {
-  /**
-   * @constant
-   * @default "video"
-   */
-  type: string;
-  /** Link to Ugoira zip */
-  externalUrl: string;
-  /** Link to Ugoira zip */
-  original: string;
-  filename: string;
-  /**
-   * @constant
-   * @default "mp4"
-   */
-  filetype: string;
-  fileCallback: () => void;
-};

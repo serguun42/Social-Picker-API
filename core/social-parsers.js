@@ -10,7 +10,28 @@ import { LoadServiceConfig, LoadTokensConfig } from '../util/load-configs.js';
 import UgoiraBuilder from '../util/ugoira-builder.js';
 
 const { CUSTOM_IMG_VIEWER_SERVICE } = LoadServiceConfig();
-const { TWITTER_OAUTH, INSTAGRAM_COOKIE, TUMBLR_OAUTH } = LoadTokensConfig();
+const { TWITTER_OAUTH, INSTAGRAM_COOKIE, TUMBLR_OAUTH, JOYREACTOR_COOKIE } = LoadTokensConfig();
+
+const DEFAULT_HEADERS = {
+  Accept:
+    // eslint-disable-next-line max-len
+    'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+  'Accept-Encoding': 'gzip, deflate, br',
+  'Accept-Language': 'en-US,en;q=0.9,ru;q=0.8',
+  'Cache-Control': 'no-cache',
+  'User-Agent':
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36',
+  Origin: 'https://www.reddit.com',
+  Pragma: 'no-cache',
+  referer: 'https://www.reddit.com/',
+  'sec-ch-ua': `"Chromium";v="104", " Not A;Brand";v="99", "Google Chrome";v="104"`,
+  'sec-ch-ua-mobile': `?0`,
+  'sec-ch-ua-platform': `"Windows"`,
+  'sec-fetch-dest': `document`,
+  'sec-fetch-mode': `navigate`,
+  'sec-fetch-site': `none`,
+  'sec-fetch-user': `?1`,
+};
 
 /**
  * https://developer.twitter.com/en/portal/dashboard
@@ -414,28 +435,8 @@ const Reddit = (url) => {
 
   const postJSON = `https://www.reddit.com${givenPathname}.json`;
   const postURL = `https://www.reddit.com${givenPathname}`;
-  const DEFAULT_REDDIT_HEADERS = {
-    Accept:
-      // eslint-disable-next-line max-len
-      'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'Accept-Language': 'en-US,en;q=0.9,ru;q=0.8',
-    'Cache-Control': 'no-cache',
-    'User-Agent':
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36',
-    Origin: 'https://www.reddit.com',
-    Pragma: 'no-cache',
-    referer: 'https://www.reddit.com/',
-    'sec-ch-ua': `"Chromium";v="104", " Not A;Brand";v="99", "Google Chrome";v="104"`,
-    'sec-ch-ua-mobile': `?0`,
-    'sec-ch-ua-platform': `"Windows"`,
-    'sec-fetch-dest': `document`,
-    'sec-fetch-mode': `navigate`,
-    'sec-fetch-site': `none`,
-    'sec-fetch-user': `?1`,
-  };
 
-  return fetch(postJSON, { headers: DEFAULT_REDDIT_HEADERS })
+  return fetch(postJSON, { headers: DEFAULT_HEADERS })
     .then((res) => {
       if (res.ok) return res.json();
       return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
@@ -465,7 +466,7 @@ const Reddit = (url) => {
             ? Promise.resolve({ externalUrl: video })
             : fetch(hslPlaylist, {
                 headers: {
-                  ...DEFAULT_REDDIT_HEADERS,
+                  ...DEFAULT_HEADERS,
                   host: SafeParseURL(hslPlaylist).hostname,
                 },
               })
@@ -483,7 +484,7 @@ const Reddit = (url) => {
 
                   return fetch(hslPlaylist.replace(/\/[^/]+$/, `/${audioPlaylistLocation}`), {
                     headers: {
-                      ...DEFAULT_REDDIT_HEADERS,
+                      ...DEFAULT_HEADERS,
                       host: SafeParseURL(hslPlaylist).hostname,
                     },
                   });
@@ -596,8 +597,6 @@ const Reddit = (url) => {
  * @returns {Promise<import("../types/media-post").SocialPost>}
  */
 const Tumblr = (url) => {
-  if (!(url instanceof URL)) url = new URL(url);
-
   const blogID = url.hostname.replace(/\.tumblr\.(com|co\.\w+|org)$/i, '');
   const postID = url.pathname.match(/^\/posts?\/(\d+)/i)?.[1];
 
@@ -650,8 +649,10 @@ const Tumblr = (url) => {
  * @param {URL} url
  * @returns {Promise<import("../types/media-post").SocialPost>}
  */
-const Danbooru = (url) =>
-  fetch(url.href)
+const Danbooru = (url) => {
+  if (!/^\/posts\/\d+/.test(url.pathname)) return Promise.resolve({});
+
+  return fetch(url.href)
     .then((res) => {
       if (res.ok) return res.text();
       return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
@@ -691,6 +692,7 @@ const Danbooru = (url) =>
         return Promise.reject(e);
       }
     });
+};
 
 /**
  * @param {URL} url
@@ -1253,7 +1255,91 @@ const Osnova = (url) => {
     );
 };
 
-/** @type {{ [platform: string]: (url: URL) => Promise<import("../types/media-post").SocialPost> }} */
+/**
+ * @param {URL} url
+ * @returns {Promise<import("../types/media-post").SocialPost>}
+ */
+const Joyreactor = (url) => {
+  const JOYREACTOR_POST_ID_RX = /^\/post\/(?<postID>\d+)/;
+  const postID = url.pathname.match(JOYREACTOR_POST_ID_RX)?.groups?.postID;
+  if (!postID) return Promise.resolve({});
+
+  url.hostname = url.hostname.replace('m.', '');
+  const postGettingUrl = `https://joyreactor.cc/post/${postID}`;
+
+  /**
+   * @param {string} imageLink
+   * @returns {string}
+   */
+  const ReactorPrepareUrl = (imageLink) => {
+    if (!imageLink || typeof imageLink !== 'string') return '';
+
+    const preparing = SafeParseURL(imageLink);
+    if (!preparing.pathname) return '';
+    if (!preparing.protocol) preparing.protocol = 'https';
+    return preparing.href;
+  };
+
+  return fetch(postGettingUrl, {
+    headers: {
+      ...DEFAULT_HEADERS,
+      cookie: JOYREACTOR_COOKIE,
+    },
+  }).then((res) => {
+    if (!res.ok) return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
+
+    return res.text().then((joyreactorPage) => {
+      try {
+        const parsedHTML = parseHTML(joyreactorPage);
+
+        const postContent = parsedHTML.querySelector('.post_content');
+        if (!postContent) throw new Error('No <postContent> in <joyreactorPage>');
+
+        const imageWrappers = postContent.querySelectorAll('.image');
+        if (!imageWrappers?.length) return Promise.resolve({});
+
+        /** @type {import("../types/media-post").SocialPost} */
+        const socialPost = {
+          author: '',
+          authorURL: '',
+          caption: '',
+          postURL: postGettingUrl,
+          medias: imageWrappers
+            .map((imageWrapper) => {
+              const fullAnchor = imageWrapper.querySelector('a');
+              const defaultImage = imageWrapper.querySelector('img');
+
+              /** @type {import("../types/media-post").Media} */
+              const media = { type: 'photo' };
+
+              media.externalUrl = (defaultImage && ReactorPrepareUrl(defaultImage.getAttribute('src'))) || undefined;
+              if (!media.externalUrl) return null;
+
+              media.externalUrl = CUSTOM_IMG_VIEWER_SERVICE.replace(/__LINK__/, encodeURI(media.externalUrl)).replace(
+                /__HEADERS__/,
+                encodeURIComponent(JSON.stringify({ referer: SafeParseURL(res.url).origin }))
+              );
+
+              media.original = (fullAnchor && ReactorPrepareUrl(fullAnchor.getAttribute('href'))) || undefined;
+              if (media.original)
+                media.original = CUSTOM_IMG_VIEWER_SERVICE.replace(/__LINK__/, encodeURI(media.original)).replace(
+                  /__HEADERS__/,
+                  encodeURIComponent(JSON.stringify({ referer: SafeParseURL(res.url).origin }))
+                );
+
+              return media;
+            })
+            .filter(Boolean),
+        };
+
+        return Promise.resolve(socialPost);
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    });
+  });
+};
+
 const ALL_PARSERS = {
   AnimePictures,
   Danbooru,
@@ -1273,10 +1359,12 @@ const ALL_PARSERS = {
   KemonoParty,
   Youtube,
   Osnova,
+  Joyreactor,
 };
 
+/** @typedef {keyof ALL_PARSERS} PlatformEnum */
 /**
- * @param {string} platform
+ * @param {PlatformEnum} platform
  * @param {URL} url
  * @returns {Promise<import("../types/media-post").SocialPost>}
  */

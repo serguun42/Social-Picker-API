@@ -19,6 +19,7 @@ export type TokensConfig = {
     token: string;
     token_secret: string;
   };
+  JOYREACTOR_COOKIE: string;
 };
 
 export type GenericConfig = ServiceConfig | TokensConfig;

@@ -1,10 +1,10 @@
 import { STATUS_CODES, createServer } from 'http';
+import SocialParser from './core/social-parsers.js';
 import CheckForLink from './util/check-for-link.js';
 import { LoadServiceConfig } from './util/load-configs.js';
 import LogMessageOrError from './util/log.js';
 import { SafeParseURL, ParseQuery } from './util/urls.js';
 import DEV from './util/is-dev.js';
-import SocialParser from './core/social-parsers.js';
 
 const { PORT } = LoadServiceConfig();
 

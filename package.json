@@ -1,6 +1,6 @@
 {
   "name": "social-picker-api",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Extract media from various posting platfroms like Twitter, Reddit, Pixiv, Youtube, Osnova and many others",
   "main": "social-picker-api.js",
   "type": "module",
@@ -30,7 +30,8 @@
     "yt-dlp",
     "osnova",
     "kemono-party",
-    "tumblr"
+    "tumblr",
+    "joyreactor"
   ],
   "author": "serguun42",
   "license": "BSL-1.0 License",

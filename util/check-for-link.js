@@ -2,7 +2,7 @@ import { SafeParseURL } from './urls.js';
 
 /**
  * @param {string} givenURL
- * @returns {{ status: boolean, platform: string, url: URL }}
+ * @returns {{ status: boolean, platform: import('../core/social-parsers').PlatformEnum, url: URL }}
  */
 const CheckForLink = (givenURL) => {
   const url = SafeParseURL(givenURL);
@@ -64,6 +64,8 @@ const CheckForLink = (givenURL) => {
     url.hostname === 'vc.ru'
   )
     return { status: true, platform: 'Osnova', url };
+  if (/^(m\.)?(joy|safe|anime\.|porn|fap)?reactor\.(cc|com)$/.test(url.hostname))
+    return { status: true, platform: 'Joyreactor', url };
 
   return { status: false, platform: '', url };
 };

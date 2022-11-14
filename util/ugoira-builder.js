@@ -6,17 +6,16 @@ import JSZip from 'jszip';
 import LogMessageOrError from './log.js';
 
 const TEMP_FOLDER = process.env.TEMP || '/tmp/';
-/** @type {Partial<import('../types/media-post').UgoiraBuilt>} */
-const UGOIRA_BUILT_DEFAULT = {
-  type: 'video',
-  filetype: 'mp4',
-};
+
+const UGOIRA_FILE_EXTENSION = 'mp4';
+/** @type {import('../types/media-post').Media['type']} */
+const UGOIRA_MEDIA_FILETYPE = 'gif';
 
 /**
  * Builds video sequence from Ugoira
  * @param {import('../types/pixiv-ugoira-meta').UgoiraMeta} ugoiraMeta
  * @param {ArrayBuffer} sourceZip
- * @returns {Promise<import('../types/media-post').UgoiraBuilt>}
+ * @returns {Promise<import('../types/media-post').Media>}
  */
 const UgoiraBuilder = (ugoiraMeta, sourceZip) =>
   new JSZip()
@@ -29,7 +28,7 @@ const UgoiraBuilder = (ugoiraMeta, sourceZip) =>
       });
 
       const hash = createHash('md5').update(`${ugoiraMeta.body.originalSrc}_${Date.now()}`).digest('hex');
-      const outputFilename = `socialpicker_${hash}_output.${UGOIRA_BUILT_DEFAULT.filetype}`;
+      const outputFilename = `socialpicker_${hash}_output.${UGOIRA_FILE_EXTENSION}`;
       const outputFilepath = resolve(TEMP_FOLDER, outputFilename);
 
       /** @type {{ filename: string, tempFilename: string, tempFilepath: string }[]} */
@@ -86,11 +85,13 @@ const UgoiraBuilder = (ugoiraMeta, sourceZip) =>
           unlink(listFilepath).catch(() => {});
           storedFiles.forEach((storedFile) => unlink(storedFile.tempFilepath).catch(() => {}));
 
-          /** @type {import('../types/media-post').UgoiraBuilt} */
+          /** @type {import('../types/media-post').Media} */
           const ugoiraBuilt = {
-            ...UGOIRA_BUILT_DEFAULT,
+            type: UGOIRA_MEDIA_FILETYPE,
             externalUrl: ugoiraMeta.body.originalSrc,
             original: ugoiraMeta.body.originalSrc,
+            otherSources: { zip: ugoiraMeta.body.originalSrc },
+            filetype: UGOIRA_FILE_EXTENSION,
             filename: outputFilepath,
             fileCallback: () => {
               unlink(outputFilepath).catch(() => {});
