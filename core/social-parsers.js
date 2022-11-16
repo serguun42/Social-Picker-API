@@ -119,21 +119,34 @@ const Twitter = (url) => {
         postURL: `https://twitter.com/${user?.username}/status/${tweetId}`,
         medias: (twitterResponse.includes?.media || [])
           .filter((tweetMedium) => twitterResponse.data.attachments?.media_keys?.includes(tweetMedium.media_key))
-          .map((tweetMedium) => {
-            if (tweetMedium.type === 'photo') return { type: 'photo', externalUrl: `${tweetMedium.url}:orig` };
+          .map(
+            /** @returns {import("../types/media-post").Media */ (tweetMedium) => {
+              if (tweetMedium.type === 'photo')
+                return {
+                  type: 'photo',
+                  externalUrl: tweetMedium.url,
+                  original: `${tweetMedium.url}:orig`,
+                  description: `${tweetMedium.width}x${tweetMedium.height}`,
+                };
 
-            if (tweetMedium.type === 'video' || tweetMedium.type === 'animated_gif') {
-              const bestVariant = tweetMedium.variants
-                .filter((variant) => 'bit_rate' in variant || tweetMedium.type === 'animated_gif')
-                .sort((prev, next) => prev.bit_rate - next.bit_rate)
-                .pop();
+              if (tweetMedium.type === 'video' || tweetMedium.type === 'animated_gif') {
+                const bestVariant = tweetMedium.variants
+                  .filter((variant) => 'bit_rate' in variant || tweetMedium.type === 'animated_gif')
+                  .sort((prev, next) => prev.bit_rate - next.bit_rate)
+                  .pop();
 
-              if (!bestVariant?.url) return null;
-              return { type: 'video', externalUrl: bestVariant.url };
+                if (!bestVariant?.url) return null;
+                return {
+                  type: 'video',
+                  externalUrl: bestVariant.url,
+                  original: bestVariant.url,
+                  description: `${tweetMedium.width}x${tweetMedium.height}`,
+                };
+              }
+
+              return null;
             }
-
-            return null;
-          })
+          )
           .filter(Boolean),
       };
 
@@ -543,7 +556,7 @@ const Reddit = (url) => {
         /** @type {import("../types/media-post").Media[]} */
         const galleryMedias = (post?.gallery_data?.items || [])
           .map(
-            /** @return {import("../types/media-post").Media} */ (item) => {
+            /** @returns {import("../types/media-post").Media} */ (item) => {
               const isItemGif = !!post?.media_metadata?.[item.media_id]?.s?.gif;
 
               if (isItemGif)
