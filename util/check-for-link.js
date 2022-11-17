@@ -13,7 +13,8 @@ const CheckForLink = (givenURL) => {
     url.hostname === 'mobile.twitter.com' ||
     url.hostname === 'nitter.net' ||
     url.hostname === 'www.nitter.net' ||
-    url.hostname === 'mobile.nitter.net'
+    url.hostname === 'mobile.nitter.net' ||
+    url.hostname === 'vxtwitter.com'
   )
     return { status: true, platform: 'Twitter', url };
   if (url.hostname === 'pbs.twimg.com' || url.hostname === 'video.twimg.com')
@@ -64,7 +65,7 @@ const CheckForLink = (givenURL) => {
     url.hostname === 'vc.ru'
   )
     return { status: true, platform: 'Osnova', url };
-  if (/^(m\.)?(joy|safe|anime\.|porn|fap)?reactor\.(cc|com)$/.test(url.hostname))
+  if (/^(m\.|img\d+\.)?(joy|safe|anime\.|porn|fap)?reactor\.(cc|com)$/.test(url.hostname))
     return { status: true, platform: 'Joyreactor', url };
 
   return { status: false, platform: '', url };

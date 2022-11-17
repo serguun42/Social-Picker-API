@@ -43,7 +43,7 @@ After launching you can access Picker with fetching it like `curl http://localho
 - _Zerochan_ – images
 - _AnimePictures_ – images
 - _KemonoParty_ – images
-- _Joyreactor_ – images from `(joy/safe/anime./etc…)reactor.сс` including `m.` subdomains
+- _Joyreactor_ – images from `[joy/safe/anime./etc…]reactor.сс` including `m.` subdomains and direct links to media files
 
 #### Some links
 
