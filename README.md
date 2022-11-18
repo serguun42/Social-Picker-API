@@ -44,6 +44,7 @@ After launching you can access Picker with fetching it like `curl http://localho
 - _AnimePictures_ – images
 - _KemonoParty_ – images
 - _Joyreactor_ – images from `[joy/safe/anime./etc…]reactor.сс` including `m.` subdomains and direct links to media files
+- _Coub_ – looped videos with linear audio. Uses [`video-audio-merge`](./util/video-audio-merge.js) for merging separate streams (via `ffmpeg`)
 
 #### Some links
 

@@ -67,6 +67,7 @@ const CheckForLink = (givenURL) => {
     return { status: true, platform: 'Osnova', url };
   if (/^(m\.|img\d+\.)?(joy|safe|anime\.|porn|fap)?reactor\.(cc|com)$/.test(url.hostname))
     return { status: true, platform: 'Joyreactor', url };
+  if (url.hostname === 'coub.com') return { status: true, platform: 'Coub', url };
 
   return { status: false, platform: '', url };
 };

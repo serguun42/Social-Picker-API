@@ -508,37 +508,35 @@ const Reddit = (url) => {
               return VideoAudioMerge(video, audio).catch(() => Promise.resolve({ externalUrl: video }));
             })
             .catch(() => Promise.resolve({ externalUrl: video }))
-            .then(
-              /** @param {import('../types/media-post').VideoAudioMerged} videoResult */ (videoResult) => {
-                /** @type {import("../types/media-post").Media[]} */
-                const videoSources = [];
+            .then((videoResult) => {
+              /** @type {import("../types/media-post").Media[]} */
+              const videoSources = [];
 
-                if ('externalUrl' in videoResult)
-                  videoSources.push({
-                    externalUrl: videoResult.externalUrl,
-                    type: isGif ? 'gif' : 'video',
-                  });
-                else if ('filename' in videoResult)
-                  videoSources.push({
-                    type: 'video',
-                    otherSources: {
-                      audioSource: videoResult.audioSource,
-                      videoSource: videoResult.videoSource,
-                    },
-                    filename: videoResult.filename,
-                    filetype: SafeParseURL(videoResult.videoSource).pathname.split('.').pop(),
-                    fileCallback: videoResult.fileCallback,
-                  });
-
-                return Promise.resolve({
-                  author,
-                  authorURL,
-                  postURL,
-                  caption,
-                  medias: videoSources,
+              if ('externalUrl' in videoResult)
+                videoSources.push({
+                  externalUrl: videoResult.externalUrl,
+                  type: isGif ? 'gif' : 'video',
                 });
-              }
-            );
+              else if ('filename' in videoResult)
+                videoSources.push({
+                  type: 'video',
+                  otherSources: {
+                    audioSource: videoResult.audioSource,
+                    videoSource: videoResult.videoSource,
+                  },
+                  filename: videoResult.filename,
+                  filetype: SafeParseURL(videoResult.videoSource).pathname.split('.').pop(),
+                  fileCallback: videoResult.fileCallback,
+                });
+
+              return Promise.resolve({
+                author,
+                authorURL,
+                postURL,
+                caption,
+                medias: videoSources,
+              });
+            });
         }
 
         if (isGallery)
@@ -1293,7 +1291,10 @@ const Joyreactor = (url) => {
       medias: [
         {
           type: isGif ? 'gif' : 'photo',
-          externalUrl: url.href,
+          externalUrl: CUSTOM_IMG_VIEWER_SERVICE.replace(/__LINK__/, encodeURI(url.href)).replace(
+            /__HEADERS__/,
+            encodeURIComponent(JSON.stringify({ referer: url.origin }))
+          ),
         },
       ],
     });
@@ -1392,6 +1393,93 @@ const Joyreactor = (url) => {
   });
 };
 
+/**
+ * @param {URL} url
+ * @returns {Promise<import("../types/media-post").SocialPost>}
+ */
+const Coub = (url) => {
+  const COUB_VIDEO_RX = /^\/view\/(?<videoID>\w+)/;
+  const videoID = url.pathname.match(COUB_VIDEO_RX)?.groups?.videoID;
+  if (!videoID) return Promise.resolve({});
+
+  const postURL = `https://coub.com/view/${videoID}`;
+
+  return fetch(postURL, {
+    headers: {
+      ...DEFAULT_HEADERS,
+      referer: 'https://coub.com/',
+    },
+  })
+    .then((res) => {
+      if (!res.ok) return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
+
+      return res.text();
+    })
+    .then((coubPage) => {
+      try {
+        const parsedHTML = parseHTML(coubPage);
+
+        const coubPageCoubJson = parsedHTML.getElementById('coubPageCoubJson');
+        if (!coubPageCoubJson) throw new Error('No <coubPageCoubJson> in <coubPage>');
+
+        /** @type {import('../types/coub-post').CoubPost} */
+        const post = JSON.parse(coubPageCoubJson.innerHTML.trim());
+
+        if (!post.file_versions) return Promise.reject(new Error(`Coub ${postURL} does not have <file_versions>`));
+
+        /** @type {import('../types/media-post').SocialPost} */
+        const socialPost = {
+          author: post.channel.title,
+          authorURL: `https://coub.com/${post.channel.permalink}`,
+          caption: post.title,
+          postURL,
+          medias: [],
+        };
+
+        let videoToMerge = '';
+        let audioToMerge = '';
+
+        if (post.file_versions.html5) {
+          /** @type {import('../types/coub-post').QualityOption[]} */
+          const videoQualities = Object.values(post.file_versions.html5.video) || [];
+          /** @type {import('../types/coub-post').QualityOption[]} */
+          const audioQualities = Object.values(post.file_versions.html5.audio) || [];
+
+          videoToMerge = videoQualities.sort((prev, next) => next.size - prev.size).shift()?.url;
+          audioToMerge = audioQualities.sort((prev, next) => next.size - prev.size).shift()?.url;
+        } else if (post.file_versions.mobile) {
+          videoToMerge = post.file_versions.mobile.video;
+          audioToMerge = post.file_versions.mobile.audio.pop();
+        } else videoToMerge = post.file_versions.share?.default;
+
+        return VideoAudioMerge(videoToMerge, audioToMerge, { loopVideo: true })
+          .catch(() => Promise.resolve({ externalUrl: videoToMerge }))
+          .then((videoAudioMerged) => {
+            if ('externalUrl' in videoAudioMerged)
+              socialPost.medias.push({
+                externalUrl: videoAudioMerged.externalUrl,
+                type: 'video',
+              });
+            else if ('filename' in videoAudioMerged)
+              socialPost.medias.push({
+                type: 'video',
+                otherSources: {
+                  audioSource: videoAudioMerged.audioSource,
+                  videoSource: videoAudioMerged.videoSource,
+                },
+                filename: videoAudioMerged.filename,
+                filetype: SafeParseURL(videoAudioMerged.videoSource).pathname.split('.').pop(),
+                fileCallback: videoAudioMerged.fileCallback,
+              });
+
+            return Promise.resolve(socialPost);
+          });
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    });
+};
+
 const ALL_PARSERS = {
   AnimePictures,
   Danbooru,
@@ -1412,6 +1500,7 @@ const ALL_PARSERS = {
   Youtube,
   Osnova,
   Joyreactor,
+  Coub,
 };
 
 /** @typedef {keyof ALL_PARSERS} PlatformEnum */
