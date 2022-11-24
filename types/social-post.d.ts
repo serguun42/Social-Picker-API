@@ -1,7 +1,7 @@
 export type Media = {
   type: 'photo' | 'gif' | 'video' | 'audio';
   /** Link to default size external file */
-  externalUrl: string;
+  externalUrl?: string;
   /** Link to original size external file */
   original?: string;
   otherSources?: { [otherSourceOriginKey: string]: string };
@@ -9,6 +9,8 @@ export type Media = {
   filetype?: string;
   /** Combined local copy of file. Later front and API identify file by `"filehash"` */
   filename?: string;
+  /** Hash for filename for later front and API. @see `filename` */
+  filehash?: string;
   /** Call it when done */
   fileCallback?: () => void;
   /** Media description e.g. youtube video quality or image size */

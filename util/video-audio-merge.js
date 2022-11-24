@@ -19,7 +19,7 @@ const TEMP_FOLDER = process.env.TEMP || '/tmp/';
  * @param {string} video
  * @param {string} audio
  * @param {VideoAudioMergeOptions} [options]
- * @returns {Promise<import('../types/media-post').VideoAudioMerged>}
+ * @returns {Promise<import('../types/social-post').VideoAudioMerged>}
  */
 const VideoAudioMerge = (video, audio, options = {}) => {
   if (!video) return Promise.reject(new Error('No video URL'));

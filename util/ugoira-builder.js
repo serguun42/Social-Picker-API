@@ -8,14 +8,14 @@ import LogMessageOrError from './log.js';
 const TEMP_FOLDER = process.env.TEMP || '/tmp/';
 
 const UGOIRA_FILE_EXTENSION = 'mp4';
-/** @type {import('../types/media-post').Media['type']} */
+/** @type {import('../types/social-post').Media['type']} */
 const UGOIRA_MEDIA_FILETYPE = 'gif';
 
 /**
  * Builds video sequence from Ugoira
  * @param {import('../types/pixiv-ugoira-meta').UgoiraMeta} ugoiraMeta
  * @param {ArrayBuffer} sourceZip
- * @returns {Promise<import('../types/media-post').Media>}
+ * @returns {Promise<import('../types/social-post').Media>}
  */
 const UgoiraBuilder = (ugoiraMeta, sourceZip) =>
   new JSZip()
@@ -85,7 +85,7 @@ const UgoiraBuilder = (ugoiraMeta, sourceZip) =>
           unlink(listFilepath).catch(() => {});
           storedFiles.forEach((storedFile) => unlink(storedFile.tempFilepath).catch(() => {}));
 
-          /** @type {import('../types/media-post').Media} */
+          /** @type {import('../types/social-post').Media} */
           const ugoiraBuilt = {
             type: UGOIRA_MEDIA_FILETYPE,
             externalUrl: ugoiraMeta.body.originalSrc,

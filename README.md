@@ -31,7 +31,7 @@ After launching you can access Picker with fetching it like `curl http://localho
 - _Pixiv_ – images and _Ugoira_-gifs. Uses external service for end-user viewing of high-res images due to Referer Header issues. Uses [`ugoira-builder`](./util/ugoira-builder.js) for creating mp4 video from Ugoira zip (via `ffmpeg`)
 - _Pixiv's direct images_ – from `*.pximg.net`
 - _Reddit_ – images, videos, gifs and galleries. Uses [`video-audio-merge`](./util/video-audio-merge.js) for merging separate streams (via `ffmpeg`)
-- _Youtube_ – video with response in [default type](./types/media-post.d.ts) containing all streams (via `yt-dlp`)
+- _Youtube_ – video with response in [default type](./types/social-post.d.ts) containing all streams (via `yt-dlp`)
 - _Osnova_ – images, videos, gifs and galleries. Also extracts Twitter and Instagram blocks/links from within and handles them with parsers above
 - _Tumblr_ – images and galleries
 - _Danbooru_ – images
@@ -43,7 +43,7 @@ After launching you can access Picker with fetching it like `curl http://localho
 - _Zerochan_ – images
 - _AnimePictures_ – images
 - _KemonoParty_ – images
-- _Joyreactor_ – images from `[joy/safe/anime./etc…]reactor.сс` including `m.` subdomains and direct links to media files
+- _Joyreactor_ – images and gifs from `[joy/safe/anime./etc…]reactor.сс` including `m.` subdomains and direct links to media files
 - _Coub_ – looped videos with linear audio. Uses [`video-audio-merge`](./util/video-audio-merge.js) for merging separate streams (via `ffmpeg`)
 
 #### Some links

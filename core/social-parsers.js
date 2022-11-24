@@ -60,7 +60,7 @@ const youtubeClient = new YTDlpWrap.default();
 
 /**
  * @param {URL} url
- * @returns {Promise<import("../types/media-post").SocialPost>}
+ * @returns {Promise<import("../types/social-post").SocialPost>}
  */
 const Twitter = (url) => {
   const statusID = url.pathname.match(/^(?:\/[\w_]+)?\/status(?:es)?\/(\d+)/)?.[1];
@@ -105,7 +105,7 @@ const Twitter = (url) => {
         (includedUser) => includedUser.id === twitterResponse.data.author_id
       );
 
-      /** @type {import("../types/media-post").SocialPost} */
+      /** @type {import("../types/social-post").SocialPost} */
       const socialPost = {
         caption,
         author: user?.name,
@@ -114,7 +114,7 @@ const Twitter = (url) => {
         medias: (twitterResponse.includes?.media || [])
           .filter((tweetMedium) => twitterResponse.data.attachments?.media_keys?.includes(tweetMedium.media_key))
           .map(
-            /** @returns {import("../types/media-post").Media */ (tweetMedium) => {
+            /** @returns {import("../types/social-post").Media */ (tweetMedium) => {
               if (tweetMedium.type === 'photo')
                 return {
                   type: 'photo',
@@ -151,7 +151,7 @@ const Twitter = (url) => {
 
 /**
  * @param {URL} url
- * @returns {Promise<import("../types/media-post").SocialPost>}
+ * @returns {Promise<import("../types/social-post").SocialPost>}
  */
 const TwitterDirect = (url) => {
   if (url.hostname === 'video.twimg.com') {
@@ -161,12 +161,12 @@ const TwitterDirect = (url) => {
       author: '',
       authorURL: '',
       caption: '',
-      postURL: encodeURI(url.href),
+      postURL: url.href,
       medias: [
         {
           type: 'video',
-          externalUrl: encodeURI(url.href),
-          original: encodeURI(url.href),
+          externalUrl: url.href,
+          original: url.href,
         },
       ],
     });
@@ -179,12 +179,12 @@ const TwitterDirect = (url) => {
     author: '',
     authorURL: '',
     caption: '',
-    postURL: encodeURI(`https://pbs.twimg.com${mediaPathname}.${format}`),
+    postURL: `https://pbs.twimg.com${mediaPathname}.${format}`,
     medias: [
       {
         type: 'photo',
-        externalUrl: encodeURI(`https://pbs.twimg.com${mediaPathname}.${format}`),
-        original: encodeURI(`https://pbs.twimg.com${mediaPathname}.${format}:orig`),
+        externalUrl: `https://pbs.twimg.com${mediaPathname}.${format}`,
+        original: `https://pbs.twimg.com${mediaPathname}.${format}:orig`,
       },
     ],
   });
@@ -192,7 +192,7 @@ const TwitterDirect = (url) => {
 
 /**
  * @param {URL} url
- * @returns {Promise<import("../types/media-post").SocialPost>}
+ * @returns {Promise<import("../types/social-post").SocialPost>}
  */
 const Instagram = (url) => {
   const PATH_REGEXP = /^\/p\/([\w-]+)(\/)?$/i;
@@ -218,7 +218,7 @@ const Instagram = (url) => {
 
       if (!post) return Promise.reject(new Error(`No post in... post: https://${url.hostname}${url.pathname}`));
 
-      /** @type {import("../types/media-post").SocialPost} */
+      /** @type {import("../types/social-post").SocialPost} */
       const socialPost = {
         caption: post?.caption?.text || '',
         postURL: `https://instagram.com${url.pathname}`,
@@ -247,7 +247,7 @@ const Instagram = (url) => {
       } else if (multipleMedia) {
         socialPost.medias = multipleMedia
           .map(
-            /** @returns {import("../types/media-post").Media} */ (media) => {
+            /** @returns {import("../types/social-post").Media} */ (media) => {
               if (!media) return null;
 
               if (media.video_versions)
@@ -274,7 +274,7 @@ const Instagram = (url) => {
 /**
  * @param {URL} url
  * @param {number} [certainImageIndex] Unique parameter only for parser `PixivDirect`
- * @returns {Promise<import("../types/media-post").SocialPost>}
+ * @returns {Promise<import("../types/social-post").SocialPost>}
  */
 const Pixiv = (url, certainImageIndex) => {
   const PIXIV_PAGE_RX = /^\/(?:\w{2}\/)?artworks\/(?<illustId>\d+)/i;
@@ -316,7 +316,7 @@ const Pixiv = (url, certainImageIndex) => {
         const post = pixivPreload?.illust?.[illustId];
         if (!post) return Promise.reject(new Error(`No <post> in preloadContent: ${postURL}`));
 
-        /** @type {import("../types/media-post").SocialPost} */
+        /** @type {import("../types/social-post").SocialPost} */
         const socialPost = {
           caption: post.title || post.illustTitle || post.description || post.illustComment,
           author: post.userName,
@@ -378,12 +378,12 @@ const Pixiv = (url, certainImageIndex) => {
               type: 'photo',
               externalUrl: CUSTOM_IMG_VIEWER_SERVICE.replace(
                 /__LINK__/,
-                encodeURI(masterFilename.replace(/\d+(_master\d+\.\w+$)/i, `${i}$1`))
-              ).replace(/__HEADERS__/, encodeURIComponent(JSON.stringify({ referer: 'https://www.pixiv.net/' }))),
-              original: CUSTOM_IMG_VIEWER_SERVICE.replace(
-                /__LINK__/,
-                encodeURI(`${origBasename + i}.${origFiletype}`)
-              ).replace(/__HEADERS__/, encodeURIComponent(JSON.stringify({ referer: 'https://www.pixiv.net/' }))),
+                masterFilename.replace(/\d+(_master\d+\.\w+$)/i, `${i}$1`)
+              ).replace(/__HEADERS__/, JSON.stringify({ referer: 'https://www.pixiv.net/' })),
+              original: CUSTOM_IMG_VIEWER_SERVICE.replace(/__LINK__/, `${origBasename + i}.${origFiletype}`).replace(
+                /__HEADERS__/,
+                JSON.stringify({ referer: 'https://www.pixiv.net/' })
+              ),
             });
         }
 
@@ -394,7 +394,7 @@ const Pixiv = (url, certainImageIndex) => {
 
 /**
  * @param {URL} url
- * @returns {Promise<import("../types/media-post").SocialPost>}
+ * @returns {Promise<import("../types/social-post").SocialPost>}
  */
 const PixivDirect = (url) => {
   const PIXIV_IMAGE_RX = /\/(?<illustId>\d+)_p(?<imageIndex>\d+)(?:_\w+)?\.\w+$/;
@@ -416,7 +416,7 @@ const PixivDirect = (url) => {
 
 /**
  * @param {URL} url
- * @returns {Promise<import("../types/media-post").SocialPost>}
+ * @returns {Promise<import("../types/social-post").SocialPost>}
  */
 const Reddit = (url) => {
   if (!url.pathname) return Promise.resolve({});
@@ -447,6 +447,7 @@ const Reddit = (url) => {
         const author = post.author || '';
         const authorURL = `https://www.reddit.com/u/${author}`;
         const imageURL = post.url || post.url_overridden_by_dest;
+        const isImgur = /imgur\.com$/i.test(SafeParseURL(imageURL).hostname);
         const isGif = /\.gif$/i.test(imageURL);
         const isVideo = post.is_video;
         const isGallery = post.is_gallery;
@@ -509,7 +510,7 @@ const Reddit = (url) => {
             })
             .catch(() => Promise.resolve({ externalUrl: video }))
             .then((videoResult) => {
-              /** @type {import("../types/media-post").Media[]} */
+              /** @type {import("../types/social-post").Media[]} */
               const videoSources = [];
 
               if ('externalUrl' in videoResult)
@@ -547,7 +548,7 @@ const Reddit = (url) => {
             caption,
             medias: (post.gallery_data?.items || [])
               .map(
-                /** @returns {import("../types/media-post").Media} */ (item) => {
+                /** @returns {import("../types/social-post").Media} */ (item) => {
                   const source = post.media_metadata?.[item.media_id]?.s;
                   if (!source) return null;
 
@@ -572,10 +573,10 @@ const Reddit = (url) => {
               .filter(Boolean),
           });
 
-        /** @type {import('../types/media-post').Media[]} */
+        /** @type {import('../types/social-post').Media[]} */
         const previewMedia = (post.preview?.images || [])
           .map(
-            /** @returns {import('../types/media-post').Media} */ (image) => {
+            /** @returns {import('../types/social-post').Media} */ (image) => {
               if (!image?.variants) return null;
 
               const isGifByPresentVariant = image.variants.gif?.source?.url;
@@ -603,7 +604,7 @@ const Reddit = (url) => {
             ? [
                 {
                   type: isGif ? 'gif' : 'photo',
-                  externalUrl: imageURL,
+                  externalUrl: isImgur ? post.preview?.images?.[0]?.source?.url || imageURL : imageURL,
                 },
               ]
             : [],
@@ -614,7 +615,7 @@ const Reddit = (url) => {
 
 /**
  * @param {URL} url
- * @returns {Promise<import("../types/media-post").SocialPost>}
+ * @returns {Promise<import("../types/social-post").SocialPost>}
  */
 const Tumblr = (url) => {
   const blogID = url.hostname.replace(/\.tumblr\.(com|co\.\w+|org)$/i, '');
@@ -630,7 +631,7 @@ const Tumblr = (url) => {
       const content = tumblr.content?.length ? tumblr.content : tumblr.trail?.[0]?.content;
       if (!content) return Promise.reject(new Error(`No content in tumblr: ${url.pathname}`));
 
-      /** @type {import("../types/media-post").Media[]} */
+      /** @type {import("../types/social-post").Media[]} */
       const medias = content
         .filter((block) => block.type === 'image')
         .map((image) => {
@@ -651,7 +652,7 @@ const Tumblr = (url) => {
         .map((text) => text?.text || '')
         .join('\n\n');
 
-      /** @type {import("../types/media-post").SocialPost} */
+      /** @type {import("../types/social-post").SocialPost} */
       const fineTumblrSocialPost = {
         author: blogID,
         authorURL: `https://${blogID}.tumblr.com`,
@@ -667,7 +668,7 @@ const Tumblr = (url) => {
 
 /**
  * @param {URL} url
- * @returns {Promise<import("../types/media-post").SocialPost>}
+ * @returns {Promise<import("../types/social-post").SocialPost>}
  */
 const Danbooru = (url) => {
   if (!/^\/posts\/\d+/.test(url.pathname)) return Promise.resolve({});
@@ -678,7 +679,7 @@ const Danbooru = (url) => {
       return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
     })
     .then((danbooruPage) => {
-      /** @type {import("../types/media-post").SocialPost} */
+      /** @type {import("../types/social-post").SocialPost} */
       const socialPost = {
         author: '',
         authorURL: '',
@@ -716,7 +717,7 @@ const Danbooru = (url) => {
 
 /**
  * @param {URL} url
- * @returns {Promise<import("../types/media-post").SocialPost>}
+ * @returns {Promise<import("../types/social-post").SocialPost>}
  */
 const Gelbooru = (url) =>
   fetch(url.href)
@@ -756,7 +757,7 @@ const Gelbooru = (url) =>
 
 /**
  * @param {URL} url
- * @returns {Promise<import("../types/media-post").SocialPost>}
+ * @returns {Promise<import("../types/social-post").SocialPost>}
  */
 const Konachan = (url) =>
   fetch(url.href)
@@ -797,7 +798,7 @@ const Konachan = (url) =>
 
 /**
  * @param {URL} url
- * @returns {Promise<import("../types/media-post").SocialPost>}
+ * @returns {Promise<import("../types/social-post").SocialPost>}
  */
 const Yandere = (url) =>
   fetch(url.href)
@@ -835,7 +836,7 @@ const Yandere = (url) =>
 
 /**
  * @param {URL} url
- * @returns {Promise<import("../types/media-post").SocialPost>}
+ * @returns {Promise<import("../types/social-post").SocialPost>}
  */
 const Eshuushuu = (url) =>
   fetch(url.href)
@@ -873,7 +874,7 @@ const Eshuushuu = (url) =>
 
 /**
  * @param {URL} url
- * @returns {Promise<import("../types/media-post").SocialPost>}
+ * @returns {Promise<import("../types/social-post").SocialPost>}
  */
 const Sankaku = (url) =>
   fetch(url.href)
@@ -911,7 +912,7 @@ const Sankaku = (url) =>
 
 /**
  * @param {URL} url
- * @returns {Promise<import("../types/media-post").SocialPost>}
+ * @returns {Promise<import("../types/social-post").SocialPost>}
  */
 const Zerochan = (url) =>
   fetch(url.href)
@@ -963,7 +964,7 @@ const Zerochan = (url) =>
 
 /**
  * @param {URL} url
- * @returns {Promise<import("../types/media-post").SocialPost>}
+ * @returns {Promise<import("../types/social-post").SocialPost>}
  */
 const AnimePictures = (url) =>
   fetch(url.href)
@@ -1000,7 +1001,7 @@ const AnimePictures = (url) =>
 
 /**
  * @param {URL} url
- * @returns {Promise<import("../types/media-post").SocialPost>}
+ * @returns {Promise<import("../types/social-post").SocialPost>}
  */
 const KemonoParty = (url) => {
   if (!url.pathname) return Promise.resolve({});
@@ -1013,7 +1014,7 @@ const KemonoParty = (url) => {
       return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
     })
     .then((kemonoPartyPage) => {
-      /** @type {import("../types/media-post").SocialPost} */
+      /** @type {import("../types/social-post").SocialPost} */
       const socialPost = {
         author: '',
         authorURL: '',
@@ -1029,7 +1030,7 @@ const KemonoParty = (url) => {
         if (!(filesAnchors instanceof Array)) throw new Error('No array with files');
 
         filesAnchors.slice(1).forEach((fileAnchor) => {
-          /** @type {import("../types/media-post").Media} */
+          /** @type {import("../types/social-post").Media} */
           const media = {
             type: 'photo',
           };
@@ -1061,7 +1062,7 @@ const KemonoParty = (url) => {
 
 /**
  * @param {URL} url
- * @returns {Promise<import("../types/media-post").SocialPost>}
+ * @returns {Promise<import("../types/social-post").SocialPost>}
  */
 const Youtube = (url) => {
   const queries = ParseQuery(url.search);
@@ -1093,7 +1094,7 @@ const Youtube = (url) => {
     )
     .then(
       /** @param {import("../types/youtube-video").YoutubeVideo} youtubeVideoOutput */ (youtubeVideoOutput) => {
-        /** @type {import("../types/media-post").SocialPost} */
+        /** @type {import("../types/social-post").SocialPost} */
         const socialPost = {
           author: youtubeVideoOutput.uploader,
           authorURL: youtubeVideoOutput.uploader_url,
@@ -1170,7 +1171,7 @@ const Youtube = (url) => {
 
 /**
  * @param {URL} url
- * @returns {Promise<import("../types/media-post").SocialPost>}
+ * @returns {Promise<import("../types/social-post").SocialPost>}
  */
 const Osnova = (url) => {
   const siteHostname = url.hostname.replace(/^.*\.(\w+\.\w+)$/, '$1').replace('the.tj', 'tjournal.ru');
@@ -1196,7 +1197,7 @@ const Osnova = (url) => {
     })
     .then(
       /** @param {import("../types/osnova-post").OsnovaPost} osnovaPost */ (osnovaPost) => {
-        /** @type {import("../types/media-post").SocialPost} */
+        /** @type {import("../types/social-post").SocialPost} */
         const socialPost = {
           author: osnovaPost.author.name,
           authorURL: osnovaPost.author.url,
@@ -1210,7 +1211,7 @@ const Osnova = (url) => {
 
         /**
          * @param {{ waiting: "Twitter" | "Instagram", link: string }} param0
-         * @returns {Promise<import("../types/media-post").Media[]>}
+         * @returns {Promise<import("../types/social-post").Media[]>}
          */
         const LocalLoadExternalBlock = ({ waiting, link }) => {
           if (waiting !== 'Twitter' && waiting !== 'Instagram') return Promise.resolve([]);
@@ -1277,7 +1278,7 @@ const Osnova = (url) => {
 
 /**
  * @param {URL} url
- * @returns {Promise<import("../types/media-post").SocialPost>}
+ * @returns {Promise<import("../types/social-post").SocialPost>}
  */
 const Joyreactor = (url) => {
   const JOYREACTOR_DIRECT_HOSTNAME_RX = /^img\d+\./;
@@ -1291,9 +1292,9 @@ const Joyreactor = (url) => {
       medias: [
         {
           type: isGif ? 'gif' : 'photo',
-          externalUrl: CUSTOM_IMG_VIEWER_SERVICE.replace(/__LINK__/, encodeURI(url.href)).replace(
+          externalUrl: CUSTOM_IMG_VIEWER_SERVICE.replace(/__LINK__/, url.href).replace(
             /__HEADERS__/,
-            encodeURIComponent(JSON.stringify({ referer: url.origin }))
+            JSON.stringify({ referer: url.origin })
           ),
         },
       ],
@@ -1339,7 +1340,7 @@ const Joyreactor = (url) => {
         const imageWrappers = postContent.querySelectorAll('.image');
         if (!imageWrappers?.length) return Promise.resolve({});
 
-        /** @type {import("../types/media-post").SocialPost} */
+        /** @type {import("../types/social-post").SocialPost} */
         const socialPost = {
           author: '',
           authorURL: '',
@@ -1350,7 +1351,7 @@ const Joyreactor = (url) => {
               const fullAnchor = imageWrapper.querySelector('a');
               const defaultImageElem = imageWrapper.querySelector('img');
 
-              /** @type {import("../types/media-post").Media} */
+              /** @type {import("../types/social-post").Media} */
               const media = {};
 
               media.externalUrl =
@@ -1358,9 +1359,9 @@ const Joyreactor = (url) => {
               if (!media.externalUrl) return null;
 
               media.type = 'photo';
-              media.externalUrl = CUSTOM_IMG_VIEWER_SERVICE.replace(/__LINK__/, encodeURI(media.externalUrl)).replace(
+              media.externalUrl = CUSTOM_IMG_VIEWER_SERVICE.replace(/__LINK__/, media.externalUrl).replace(
                 /__HEADERS__/,
-                encodeURIComponent(JSON.stringify({ referer: SafeParseURL(res.url).origin }))
+                JSON.stringify({ referer: SafeParseURL(res.url).origin })
               );
 
               media.original = (fullAnchor && ReactorPrepareUrl(fullAnchor.getAttribute('href'))) || undefined;
@@ -1368,15 +1369,15 @@ const Joyreactor = (url) => {
                 if (/\.gif$/i.test(media.original)) {
                   media.type = 'gif';
                   media.filetype = 'gif';
-                  media.externalUrl = CUSTOM_IMG_VIEWER_SERVICE.replace(/__LINK__/, encodeURI(media.original)).replace(
+                  media.externalUrl = CUSTOM_IMG_VIEWER_SERVICE.replace(/__LINK__/, media.original).replace(
                     /__HEADERS__/,
-                    encodeURIComponent(JSON.stringify({ referer: SafeParseURL(res.url).origin }))
+                    JSON.stringify({ referer: SafeParseURL(res.url).origin })
                   );
                 }
 
-                media.original = CUSTOM_IMG_VIEWER_SERVICE.replace(/__LINK__/, encodeURI(media.original)).replace(
+                media.original = CUSTOM_IMG_VIEWER_SERVICE.replace(/__LINK__/, media.original).replace(
                   /__HEADERS__/,
-                  encodeURIComponent(JSON.stringify({ referer: SafeParseURL(res.url).origin }))
+                  JSON.stringify({ referer: SafeParseURL(res.url).origin })
                 );
               }
 
@@ -1395,7 +1396,7 @@ const Joyreactor = (url) => {
 
 /**
  * @param {URL} url
- * @returns {Promise<import("../types/media-post").SocialPost>}
+ * @returns {Promise<import("../types/social-post").SocialPost>}
  */
 const Coub = (url) => {
   const COUB_VIDEO_RX = /^\/view\/(?<videoID>\w+)/;
@@ -1427,7 +1428,7 @@ const Coub = (url) => {
 
         if (!post.file_versions) return Promise.reject(new Error(`Coub ${postURL} does not have <file_versions>`));
 
-        /** @type {import('../types/media-post').SocialPost} */
+        /** @type {import('../types/social-post').SocialPost} */
         const socialPost = {
           author: post.channel.title,
           authorURL: `https://coub.com/${post.channel.permalink}`,
@@ -1507,7 +1508,7 @@ const ALL_PARSERS = {
 /**
  * @param {PlatformEnum} platform
  * @param {URL} url
- * @returns {Promise<import("../types/media-post").SocialPost>}
+ * @returns {Promise<import("../types/social-post").SocialPost>}
  */
 const SocialParser = (platform, url) => {
   const platformParser = ALL_PARSERS[platform];
