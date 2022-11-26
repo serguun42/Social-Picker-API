@@ -6,10 +6,10 @@ import { parse as parseHTML } from 'node-html-parser';
 import VideoAudioMerge from '../util/video-audio-merge.js';
 import { SafeParseURL, ParseQuery, ParsePath } from '../util/urls.js';
 import LogMessageOrError from '../util/log.js';
-import { LoadServiceConfig, LoadTokensConfig } from '../util/load-configs.js';
+import { LoadTokensConfig } from '../util/load-configs.js';
 import UgoiraBuilder from '../util/ugoira-builder.js';
+import FormViewerURL from '../util/form-viewer-url.js';
 
-const { CUSTOM_IMG_VIEWER_SERVICE } = LoadServiceConfig();
 const { TWITTER_OAUTH, INSTAGRAM_COOKIE, TUMBLR_OAUTH, JOYREACTOR_COOKIE } = LoadTokensConfig();
 
 const DEFAULT_HEADERS = {
@@ -376,14 +376,11 @@ const Pixiv = (url, certainImageIndex) => {
           if (!(typeof certainImageIndex === 'number' && certainImageIndex !== i))
             socialPost.medias.push({
               type: 'photo',
-              externalUrl: CUSTOM_IMG_VIEWER_SERVICE.replace(
-                /__LINK__/,
-                masterFilename.replace(/\d+(_master\d+\.\w+$)/i, `${i}$1`)
-              ).replace(/__HEADERS__/, JSON.stringify({ referer: 'https://www.pixiv.net/' })),
-              original: CUSTOM_IMG_VIEWER_SERVICE.replace(/__LINK__/, `${origBasename + i}.${origFiletype}`).replace(
-                /__HEADERS__/,
-                JSON.stringify({ referer: 'https://www.pixiv.net/' })
+              externalUrl: FormViewerURL(
+                masterFilename.replace(/\d+(_master\d+\.\w+$)/i, `${i}$1`),
+                'https://www.pixiv.net/'
               ),
+              original: FormViewerURL(`${origBasename + i}.${origFiletype}`, 'https://www.pixiv.net/'),
             });
         }
 
@@ -604,7 +601,9 @@ const Reddit = (url) => {
             ? [
                 {
                   type: isGif ? 'gif' : 'photo',
-                  externalUrl: isImgur ? post.preview?.images?.[0]?.source?.url || imageURL : imageURL,
+                  externalUrl: isImgur
+                    ? (post.preview?.images?.[0]?.source?.url || '').replace(/&amp;/g, '&') || imageURL
+                    : imageURL,
                 },
               ]
             : [],
@@ -1282,8 +1281,7 @@ const Osnova = (url) => {
  */
 const Joyreactor = (url) => {
   const JOYREACTOR_DIRECT_HOSTNAME_RX = /^img\d+\./;
-  if (JOYREACTOR_DIRECT_HOSTNAME_RX.test(url.hostname)) {
-    const isGif = /\.gif$/.test(url.pathname);
+  if (JOYREACTOR_DIRECT_HOSTNAME_RX.test(url.hostname))
     return Promise.resolve({
       author: '',
       authorURL: '',
@@ -1291,15 +1289,11 @@ const Joyreactor = (url) => {
       postURL: url.href,
       medias: [
         {
-          type: isGif ? 'gif' : 'photo',
-          externalUrl: CUSTOM_IMG_VIEWER_SERVICE.replace(/__LINK__/, url.href).replace(
-            /__HEADERS__/,
-            JSON.stringify({ referer: url.origin })
-          ),
+          type: /\.gif$/.test(url.pathname) ? 'gif' : 'photo',
+          externalUrl: FormViewerURL(url.href, url.origin),
         },
       ],
     });
-  }
 
   const JOYREACTOR_POST_ID_RX = /^\/post\/(?<postID>\d+)/;
   const postID = url.pathname.match(JOYREACTOR_POST_ID_RX)?.groups?.postID;
@@ -1340,11 +1334,27 @@ const Joyreactor = (url) => {
         const imageWrappers = postContent.querySelectorAll('.image');
         if (!imageWrappers?.length) return Promise.resolve({});
 
+        const postDescription =
+          parsedHTML.getElementById('contentinner')?.querySelector('.post_description')?.innerText?.trim() || '';
+        const postTitle = postDescription.split('/')[0]?.trim();
+        const postTags = postDescription
+          .split('/')[1]
+          ?.trim()
+          .split('::')
+          .map((tag) => `#${tag.trim()}`)
+          .join(' ');
+
+        const authorAnchor = parsedHTML.getElementById('contentinner')?.querySelector('.uhead_nick a');
+        const author = authorAnchor?.innerText || '';
+        const authorURL = authorAnchor?.getAttribute('href')
+          ? new URL(authorAnchor.getAttribute('href'), SafeParseURL(res.url).origin)
+          : '';
+
         /** @type {import("../types/social-post").SocialPost} */
         const socialPost = {
-          author: '',
-          authorURL: '',
-          caption: '',
+          author,
+          authorURL,
+          caption: postTitle || postTags,
           postURL: postGettingUrl,
           medias: imageWrappers
             .map((imageWrapper) => {
@@ -1354,31 +1364,43 @@ const Joyreactor = (url) => {
               /** @type {import("../types/social-post").Media} */
               const media = {};
 
-              media.externalUrl =
-                (defaultImageElem && ReactorPrepareUrl(defaultImageElem.getAttribute('src'))) || undefined;
-              if (!media.externalUrl) return null;
+              const defaultImage = ReactorPrepareUrl(defaultImageElem?.getAttribute('src'));
+              if (!defaultImage) return null;
 
               media.type = 'photo';
-              media.externalUrl = CUSTOM_IMG_VIEWER_SERVICE.replace(/__LINK__/, media.externalUrl).replace(
-                /__HEADERS__/,
-                JSON.stringify({ referer: SafeParseURL(res.url).origin })
-              );
+              media.externalUrl = FormViewerURL(defaultImage, SafeParseURL(defaultImage).origin);
 
-              media.original = (fullAnchor && ReactorPrepareUrl(fullAnchor.getAttribute('href'))) || undefined;
-              if (media.original) {
-                if (/\.gif$/i.test(media.original)) {
+              const full = ReactorPrepareUrl(fullAnchor?.getAttribute('href'));
+              const extension = (full || defaultImage).match(/\.(?<extension>\w+)$/i)?.groups?.extension;
+              media.filetype = extension;
+
+              if (full) {
+                if (extension === 'gif') {
                   media.type = 'gif';
-                  media.filetype = 'gif';
-                  media.externalUrl = CUSTOM_IMG_VIEWER_SERVICE.replace(/__LINK__/, media.original).replace(
-                    /__HEADERS__/,
-                    JSON.stringify({ referer: SafeParseURL(res.url).origin })
-                  );
-                }
+                  media.externalUrl = FormViewerURL(full, SafeParseURL(full).origin);
 
-                media.original = CUSTOM_IMG_VIEWER_SERVICE.replace(/__LINK__/, media.original).replace(
-                  /__HEADERS__/,
-                  JSON.stringify({ referer: SafeParseURL(res.url).origin })
-                );
+                  const videoElem = imageWrapper.querySelector('video');
+                  if (videoElem) {
+                    /** Telegram sometimes cannot send .webm videos and gifs from .webm. If so, set to mp4 */
+                    const matchingType = 'mp4';
+
+                    const properSources = videoElem
+                      .querySelectorAll('source')
+                      .map((sourceElem) => ({
+                        url: sourceElem.getAttribute('src'),
+                        mimeType: sourceElem.getAttribute('type'),
+                      }))
+                      .filter(({ mimeType }) => url && new RegExp(`${matchingType}$`, 'i').test(mimeType));
+
+                    const availableSource = ReactorPrepareUrl(properSources.pop()?.url);
+                    if (availableSource) {
+                      media.filetype = matchingType;
+                      media.externalUrl = FormViewerURL(availableSource, SafeParseURL(availableSource).origin);
+                    }
+                  }
+
+                  media.original = media.externalUrl;
+                } else media.original = FormViewerURL(full, SafeParseURL(full).origin);
               }
 
               return media;

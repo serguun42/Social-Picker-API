@@ -111,4 +111,4 @@ createServer((req, res) => {
   return SendStatus(404);
 }).listen(PORT);
 
-if (DEV) process.stdout.write(`\x1BcStarted dev instance on http://localhost:${PORT}\n`);
+if (DEV) process.stdout.write(`\x1BcStarted dev instance on http://localhost:${PORT}/?url=DEFAULT\n`);
