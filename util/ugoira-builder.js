@@ -13,7 +13,7 @@ const UGOIRA_MEDIA_FILETYPE = 'gif';
 
 /**
  * Builds video sequence from Ugoira
- * @param {import('../types/pixiv-ugoira-meta').UgoiraMeta} ugoiraMeta
+ * @param {import('../types/pixiv').UgoiraMeta} ugoiraMeta
  * @param {ArrayBuffer} sourceZip
  * @returns {Promise<import('../types/social-post').Media>}
  */

@@ -4,7 +4,13 @@ export type PixivPreload = {
   user: { [userId: string]: User };
 };
 
-type PostAkaIllust = {
+export type PixivAjax = {
+  error: boolean;
+  message: string;
+  body: PostAkaIllust;
+};
+
+export type PostAkaIllust = {
   illustId: string;
   illustTitle: string;
   illustComment: string;
@@ -167,4 +173,16 @@ type User = {
   sketchLives: any[];
 };
 
-export default PixivPreload;
+export type UgoiraMeta = {
+  error: boolean;
+  message: string;
+  body: {
+    src: string;
+    originalSrc: string;
+    mime_type: string;
+    frames: {
+      file: string;
+      delay: number;
+    }[];
+  };
+};

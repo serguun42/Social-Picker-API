@@ -1,4 +1,6 @@
 {
 	"PORT": 8080,
-	"CUSTOM_IMG_VIEWER_SERVICE": "https://example.com/viewer?request=__LINK__&headers=__HEADERS__"
+	"CUSTOM_IMG_VIEWER_SERVICE": "https://example.com/viewer?request=__LINK__&headers=__HEADERS__&proxy=__PROXY__",
+	"PROXY_HOSTNAME": "localhost",
+	"PROXY_PORT": 8081
 }

@@ -3,26 +3,33 @@ import TwitterLite from 'twitter-lite';
 import { createClient } from 'tumblr.js';
 import YTDlpWrap from 'yt-dlp-wrap';
 import { parse as parseHTML } from 'node-html-parser';
+import SocksProxyAgent from 'socks-proxy-agent';
 import VideoAudioMerge from '../util/video-audio-merge.js';
 import { SafeParseURL, ParseQuery, ParsePath } from '../util/urls.js';
 import LogMessageOrError from '../util/log.js';
-import { LoadTokensConfig } from '../util/load-configs.js';
+import { LoadServiceConfig, LoadTokensConfig } from '../util/load-configs.js';
 import UgoiraBuilder from '../util/ugoira-builder.js';
 import FormViewerURL from '../util/form-viewer-url.js';
 
+const { PROXY_HOSTNAME, PROXY_PORT } = LoadServiceConfig();
 const { TWITTER_OAUTH, INSTAGRAM_COOKIE, TUMBLR_OAUTH, JOYREACTOR_COOKIE } = LoadTokensConfig();
 
+const PROXY_AGENT =
+  PROXY_HOSTNAME && PROXY_PORT
+    ? new SocksProxyAgent.SocksProxyAgent({ hostname: PROXY_HOSTNAME, port: PROXY_PORT })
+    : null;
 const DEFAULT_HEADERS = {
   accept:
     // eslint-disable-next-line max-len
     'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
   'accept-language': 'en-US,en;q=0.9,ru-RU;q=0.8,ru;q=0.7',
   'cache-control': 'max-age=0',
-  'sec-ch-ua': '"Google Chrome";v="107", "Chromium";v="107", "Not=A?Brand";v="24"',
+  'sec-ch-ua': '"Not?A_Brand";v="8", "Chromium";v="108", "Google Chrome";v="108"',
   'sec-ch-ua-mobile': '?0',
   'sec-ch-ua-platform': '"Windows"',
   'sec-fetch-dest': 'document',
   'sec-fetch-mode': 'navigate',
+  'sec-fetch-site': 'same-origin',
   'sec-fetch-user': '?1',
   'upgrade-insecure-requests': '1',
 };
@@ -290,7 +297,7 @@ const Pixiv = (url, certainImageIndex) => {
 
   const postURL = `https://www.pixiv.net/en/artworks/${illustId}`;
 
-  return fetch(postURL, { headers: PIXIV_HEADERS })
+  return fetch(postURL, { headers: PIXIV_HEADERS, agent: PROXY_AGENT })
     .then((res) => {
       if (res.ok) return res.text();
       return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
@@ -312,7 +319,7 @@ const Pixiv = (url, certainImageIndex) => {
       }
     })
     .then(
-      /** @param {import("../types/pixiv-preload").PixivPreload} pixivPreload */ (pixivPreload) => {
+      /** @param {import("../types/pixiv").PixivPreload} pixivPreload */ (pixivPreload) => {
         const post = pixivPreload?.illust?.[illustId];
         if (!post) return Promise.reject(new Error(`No <post> in preloadContent: ${postURL}`));
 
@@ -338,15 +345,15 @@ const Pixiv = (url, certainImageIndex) => {
         if (isUgoira) {
           const ugoiraMetaUrl = `https://www.pixiv.net/ajax/illust/${illustId}/ugoira_meta`;
 
-          return fetch(ugoiraMetaUrl, { headers: PIXIV_HEADERS })
+          return fetch(ugoiraMetaUrl, { headers: PIXIV_HEADERS, agent: PROXY_AGENT })
             .then((res) => {
               if (res.ok) return res.json();
               return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
             })
             .then(
-              /** @param {import('../types/pixiv-ugoira-meta').UgoiraMeta} ugoiraMeta */ (ugoiraMeta) => {
+              /** @param {import('../types/pixiv').UgoiraMeta} ugoiraMeta */ (ugoiraMeta) => {
                 const uroiraOriginalZip = ugoiraMeta.body.originalSrc;
-                return fetch(uroiraOriginalZip, { headers: PIXIV_HEADERS })
+                return fetch(uroiraOriginalZip, { headers: PIXIV_HEADERS, agent: PROXY_AGENT })
                   .then((res) => {
                     if (res.ok) return res.arrayBuffer();
                     return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
@@ -360,27 +367,50 @@ const Pixiv = (url, certainImageIndex) => {
             );
         }
 
+        /** Extremely dirty backup way to extract anything valuable from Pixiv post */
+        const { dirtyImageDate, dirtyImageFiletype } =
+          JSON.stringify(post).match(
+            new RegExp(`"[^"]+(?<dirtyImageDate>img/(\\d+/){6}${illustId}_p)[^"]+\\.(?<dirtyImageFiletype>\\w+)"`)
+          )?.groups || {};
+
+        const dirtyOriginalImage =
+          dirtyImageDate && dirtyImageFiletype
+            ? `https://i.pximg.net/img-original/${dirtyImageDate}0.${dirtyImageFiletype}`
+            : '';
+        const dirtyMasterImage =
+          dirtyImageDate && dirtyImageFiletype
+            ? `https://i.pximg.net/img-master/${dirtyImageDate}0_master1200.${dirtyImageFiletype}`
+            : '';
+
         const sourcesAmount = post?.pageCount;
+        const origFilename = post.urls.original || dirtyOriginalImage;
 
-        for (let i = 0; i < sourcesAmount; i++) {
-          const origFilename = post.urls.original;
-          const origBasename = origFilename.replace(/\d+\.(\w+)$/i, '');
-          let origFiletype = origFilename.match(/\.(\w+)$/i);
+        if (!origFilename)
+          return Promise.reject(
+            new Error(
+              `No <origFilename> in post ${postURL} (${JSON.stringify(
+                { dirtyImageDate, dirtyImageFiletype },
+                false,
+                2
+              )})`
+            )
+          );
 
-          // eslint-disable-next-line prefer-destructuring
-          if (origFiletype && origFiletype[1]) origFiletype = origFiletype[1];
-          else origFiletype = 'png';
+        const origBasename = origFilename.replace(/\d+\.(\w+)$/, '');
+        const origFiletype = origFilename.match(/\.(?<filetype>\w+)$/)?.groups?.filetype || 'png';
+        const masterFilename = post.urls.regular || dirtyMasterImage;
 
-          const masterFilename = post.urls.regular;
-
-          if (!(typeof certainImageIndex === 'number' && certainImageIndex !== i))
+        for (let sourceIndex = 0; sourceIndex < sourcesAmount; sourceIndex++) {
+          if (!(typeof certainImageIndex === 'number' && certainImageIndex !== sourceIndex))
             socialPost.medias.push({
               type: 'photo',
               externalUrl: FormViewerURL(
-                masterFilename.replace(/\d+(_master\d+\.\w+$)/i, `${i}$1`),
-                'https://www.pixiv.net/'
+                masterFilename.replace(/\d+(_master\d+\.\w+$)/i, `${sourceIndex}$1`),
+                'https://www.pixiv.net/',
+                true
               ),
-              original: FormViewerURL(`${origBasename + i}.${origFiletype}`, 'https://www.pixiv.net/'),
+              filetype: origFiletype,
+              original: FormViewerURL(`${origBasename}${sourceIndex}.${origFiletype}`, 'https://www.pixiv.net/', true),
             });
         }
 

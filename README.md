@@ -8,7 +8,7 @@ Usage: give a link to the post and receive its content.
 
 There are some configuration files:
 
-- [`service.json`](./config/service.json) – service port and external service for viewing some content
+- [`service.json`](./config/service.json) – service port and external service for viewing some content with additional local proxy
 - [`tokens.json`](./config/tokens.json) – tokens for some platforms
 - [`pm2.production.json`](./config/pm2.production.json) – config for `pm2` daemon
 - [`nodemon.dev.json`](./config/nodemon.dev.json) – config development hot-reloader `nodemon`

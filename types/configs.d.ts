@@ -3,6 +3,8 @@ export type ConfigName = 'service' | 'tokens';
 export type ServiceConfig = {
   PORT: number;
   CUSTOM_IMG_VIEWER_SERVICE: string;
+  PROXY_HOSTNAME?: string;
+  PROXY_PORT?: number;
 };
 
 export type TokensConfig = {
