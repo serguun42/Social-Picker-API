@@ -14,7 +14,8 @@ const CheckForLink = (givenURL) => {
     url.hostname === 'nitter.net' ||
     url.hostname === 'www.nitter.net' ||
     url.hostname === 'mobile.nitter.net' ||
-    url.hostname === 'vxtwitter.com'
+    url.hostname === 'vxtwitter.com' ||
+    url.hostname === 'fxtwitter.com'
   )
     return { status: true, platform: 'Twitter', url };
   if (url.hostname === 'pbs.twimg.com' || url.hostname === 'video.twimg.com')

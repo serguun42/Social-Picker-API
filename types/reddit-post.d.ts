@@ -18,6 +18,21 @@ export interface Child {
   data: ChildData;
 }
 
+export interface RedditVideo {
+  bitrate_kbps: number;
+  /** Primary video URL */
+  fallback_url: string;
+  height: number;
+  width: number;
+  scrubber_media_url: string;
+  dash_url: string;
+  duration: number;
+  /** Link to HSL playlist with all streams */
+  hls_url: string;
+  is_gif: boolean;
+  transcoding_status: string;
+}
+
 export interface ChildData {
   approved_at_utc: any;
   subreddit: string;
@@ -50,7 +65,6 @@ export interface ChildData {
   author_flair_template_id: string;
   is_original_content: boolean;
   author_fullname: string;
-  secure_media: any;
   is_reddit_media_domain: boolean;
   is_meta: boolean;
   category: any;
@@ -117,7 +131,6 @@ export interface ChildData {
   discussion_type: any;
   num_comments: number;
   send_replies: boolean;
-  media: any;
   contest_mode: boolean;
   author_patreon_flair: boolean;
   author_flair_text_color: string;
@@ -131,7 +144,9 @@ export interface ChildData {
   mod_reports: any[];
   is_video: boolean;
 
-  
+  media?: { reddit_video: RedditVideo };
+  secure_media?: { reddit_video: RedditVideo };
+
   gallery_data?: {
     items: [
       {

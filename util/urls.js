@@ -112,19 +112,23 @@ export const CombineQueries = (queries) => {
 };
 
 /**
- * @param {string} link
+ * @param {string | URL} link
+ * @param {string | URL} [base]
  * @returns {URL}
  */
-export const SafeParseURL = (link) => {
+export const SafeParseURL = (link, base) => {
   try {
-    const url = new URL(link);
-    return url;
+    return new URL(link, base);
     // eslint-disable-next-line no-empty
   } catch (e) {}
 
   try {
-    const url = new URL(link, 'https://example.com');
-    return url;
+    return new URL(`https://${link}`);
+    // eslint-disable-next-line no-empty
+  } catch (e) {}
+
+  try {
+    return new URL(link, 'https://example.com');
     // eslint-disable-next-line no-empty
   } catch (e) {}
 

@@ -437,7 +437,7 @@ const PixivDirect = (url) => {
     return Promise.resolve({});
   }
 
-  const pixivUrl = new URL(`https://www.pixiv.net/en/artworks/${illustId}`);
+  const pixivUrl = SafeParseURL(`https://www.pixiv.net/en/artworks/${illustId}`);
   return Pixiv(pixivUrl, parseInt(imageIndex));
 };
 
@@ -458,7 +458,7 @@ const Reddit = (url) => {
   const givenPathname = match?.groups?.givenPathname;
   if (!givenPathname) return Promise.resolve({});
 
-  const postURL = new URL(givenPathname, 'https://www.reddit.com').href;
+  const postURL = SafeParseURL(givenPathname, 'https://www.reddit.com').href;
 
   return fetch(`${postURL}.json`, { headers: REDDIT_HEADERS })
     .then((res) => {
@@ -484,87 +484,90 @@ const Reddit = (url) => {
           const parentId = crossPostParent.split('_')[1];
           if (!parentId) return Promise.resolve({});
 
-          return Reddit(new URL(`/comments/${parentId}`, 'https://www.reddit.com'));
+          return Reddit(SafeParseURL(`/comments/${parentId}`, 'https://www.reddit.com'));
         }
 
         if (isVideo) {
           const video = post.secure_media?.reddit_video?.fallback_url;
-          if (!video) return Promise.reject(new Error('Reddit no video'));
+          if (!video) return Promise.reject(new Error(`Reddit: ${postURL} is video but there is no secure_media`));
 
           const hslPlaylist = post.secure_media?.reddit_video?.hls_url;
-          if (isGif || !hslPlaylist) return Promise.resolve({ externalUrl: video });
-
-          return fetch(hslPlaylist, {
-            headers: {
-              ...REDDIT_HEADERS,
-              host: SafeParseURL(hslPlaylist).hostname,
-            },
-          })
-            .then((res) => {
-              if (res.ok) return res.text();
-              return Promise.reject(new Error(`Response status from Reddit ${res.status}`));
-            })
-            .then((hslFile) => {
-              const hslPlaylistLines = hslFile.split('\t');
-              const audioPlaylistLocation =
-                (hslPlaylistLines.filter((line) => /TYPE=AUDIO/i.test(line)).pop() || '').match(/URI="([^"]+)"/)?.[1] ||
-                '';
-
-              return fetch(hslPlaylist.replace(/\/[^/]+$/, `/${audioPlaylistLocation}`), {
-                headers: {
-                  ...REDDIT_HEADERS,
-                  host: SafeParseURL(hslPlaylist).hostname,
-                },
-              });
-            })
-            .then((res) => {
-              if (res.ok) return res.text();
-              return Promise.reject(new Error(`Response status from Reddit ${res.status}`));
-            })
-            .then((audioPlaylistFile) => {
-              const audioFilename = (
-                audioPlaylistFile
-                  .split('\n')
-                  .filter((line) => line && !/^#/.test(line))
-                  .pop() || ''
-              ).trim();
-              if (!audioFilename) return Promise.resolve({ externalUrl: video });
-
-              const audio = hslPlaylist.replace(/\/[^/]+$/, `/${audioFilename}`);
-              if (!audio) return Promise.resolve({ externalUrl: video });
-
-              return VideoAudioMerge(video, audio).catch(() => Promise.resolve({ externalUrl: video }));
-            })
-            .catch(() => Promise.resolve({ externalUrl: video }))
-            .then((videoResult) => {
-              /** @type {import("../types/social-post").Media[]} */
-              const videoSources = [];
-
-              if ('externalUrl' in videoResult)
-                videoSources.push({
-                  externalUrl: videoResult.externalUrl,
-                  type: isGif ? 'gif' : 'video',
-                });
-              else if ('filename' in videoResult)
-                videoSources.push({
-                  type: 'video',
-                  otherSources: {
-                    audioSource: videoResult.audioSource,
-                    videoSource: videoResult.videoSource,
+          const videoResultPromise =
+            isGif || !hslPlaylist
+              ? Promise.resolve({ externalUrl: video })
+              : fetch(hslPlaylist, {
+                  headers: {
+                    ...REDDIT_HEADERS,
+                    host: SafeParseURL(hslPlaylist).hostname,
                   },
-                  filename: videoResult.filename,
-                  filetype: SafeParseURL(videoResult.videoSource).pathname.split('.').pop(),
-                  fileCallback: videoResult.fileCallback,
-                });
+                })
+                  .then((res) => {
+                    if (res.ok) return res.text();
+                    return Promise.reject(new Error(`Response status from Reddit ${res.status}`));
+                  })
+                  .then((hslFile) => {
+                    const hslPlaylistLines = hslFile.split('\n');
+                    const audioPlaylistLocation =
+                      (hslPlaylistLines.filter((line) => /TYPE=AUDIO/i.test(line)).pop() || '').match(
+                        /URI="([^"]+)"/
+                      )?.[1] || '';
 
-              return Promise.resolve({
-                author,
-                authorURL,
-                postURL,
-                caption,
-                medias: videoSources,
+                    return fetch(hslPlaylist.replace(/\/[^/]+$/, `/${audioPlaylistLocation}`), {
+                      headers: {
+                        ...REDDIT_HEADERS,
+                        host: SafeParseURL(hslPlaylist).hostname,
+                      },
+                    });
+                  })
+                  .then((res) => {
+                    if (res.ok) return res.text();
+                    return Promise.reject(new Error(`Response status from Reddit ${res.status}`));
+                  })
+                  .then((audioPlaylistFile) => {
+                    const audioFilename = (
+                      audioPlaylistFile
+                        .split('\n')
+                        .filter((line) => line && !/^#/.test(line))
+                        .pop() || ''
+                    ).trim();
+                    if (!audioFilename) return Promise.resolve({ externalUrl: video });
+
+                    const audio = hslPlaylist.replace(/\/[^/]+$/, `/${audioFilename}`);
+                    if (!audio) return Promise.resolve({ externalUrl: video });
+
+                    return VideoAudioMerge(video, audio).catch(() => Promise.resolve({ externalUrl: video }));
+                  })
+                  .catch(() => Promise.resolve({ externalUrl: video }));
+
+          return videoResultPromise.then((videoResult) => {
+            /** @type {import("../types/social-post").Media[]} */
+            const videoSources = [];
+
+            if ('externalUrl' in videoResult)
+              videoSources.push({
+                externalUrl: videoResult.externalUrl,
+                type: isGif ? 'gif' : 'video',
               });
+            else if ('filename' in videoResult)
+              videoSources.push({
+                type: 'video',
+                otherSources: {
+                  audioSource: videoResult.audioSource,
+                  videoSource: videoResult.videoSource,
+                },
+                filename: videoResult.filename,
+                filetype: SafeParseURL(videoResult.videoSource).pathname.split('.').pop(),
+                fileCallback: videoResult.fileCallback,
+              });
+
+            return Promise.resolve({
+              author,
+              authorURL,
+              postURL,
+              caption,
+              medias: videoSources,
             });
+          });
         }
 
         if (isGallery)
@@ -627,7 +630,7 @@ const Reddit = (url) => {
           caption,
           medias: previewMedia.length
             ? previewMedia
-            : imageURL
+            : /\.(jpe?g|png)$/i.test(imageURL)
             ? [
                 {
                   type: isGif ? 'gif' : 'photo',
@@ -734,7 +737,7 @@ const Danbooru = (url) => {
         const uploaderAnchor = parsedHTML.querySelector('#post-info-uploader > a');
         if (uploaderAnchor) {
           socialPost.author = uploaderAnchor.getAttribute('data-user-name') || '';
-          socialPost.authorURL = new URL(uploaderAnchor.getAttribute('href') || '', url.origin);
+          socialPost.authorURL = SafeParseURL(uploaderAnchor.getAttribute('href') || '', url.origin);
         }
 
         return Promise.resolve(socialPost);
@@ -1019,7 +1022,7 @@ const AnimePictures = (url) =>
           medias: [
             {
               type: 'photo',
-              externalUrl: new URL(source, url.origin).href,
+              externalUrl: SafeParseURL(source, url.origin).href,
             },
           ],
         });
@@ -1065,10 +1068,10 @@ const KemonoParty = (url) => {
           };
 
           const fullsizeURL = fileAnchor.getAttribute('href');
-          if (fullsizeURL) media.original = new URL(fullsizeURL, url.origin);
+          if (fullsizeURL) media.original = SafeParseURL(fullsizeURL, url.origin);
 
           const thumbnailImage = fileAnchor.querySelector('img');
-          if (thumbnailImage) media.externalUrl = new URL(thumbnailImage.getAttribute('src'), url.origin);
+          if (thumbnailImage) media.externalUrl = SafeParseURL(thumbnailImage.getAttribute('src'), url.origin);
 
           socialPost.medias.push(media);
         });
@@ -1076,7 +1079,7 @@ const KemonoParty = (url) => {
         const usernameAnchor = parsedHTML.querySelector('.post__user-name');
         if (usernameAnchor) {
           socialPost.author = usernameAnchor.innerText?.trim() || '';
-          socialPost.authorURL = new URL(usernameAnchor.getAttribute('href'), url.origin);
+          socialPost.authorURL = SafeParseURL(usernameAnchor.getAttribute('href'), url.origin);
         }
 
         const postTitleHeader = parsedHTML.querySelector('.post__title');
@@ -1377,7 +1380,7 @@ const Joyreactor = (url) => {
         const authorAnchor = parsedHTML.getElementById('contentinner')?.querySelector('.uhead_nick a');
         const author = authorAnchor?.innerText || '';
         const authorURL = authorAnchor?.getAttribute('href')
-          ? new URL(authorAnchor.getAttribute('href'), SafeParseURL(res.url).origin)
+          ? SafeParseURL(authorAnchor.getAttribute('href'), res.url)
           : '';
 
         /** @type {import("../types/social-post").SocialPost} */
