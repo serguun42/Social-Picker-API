@@ -66,25 +66,33 @@ const UgoiraBuilder = (ugoiraMeta, sourceZip) =>
         .then(
           () =>
             new Promise((ffmpegResolve, ffmpegReject) => {
-              const ffmpegProcess = exec(
-                `ffmpeg -f concat -i "${listFilename}" -vf format=yuv420p "${outputFilename}"`,
-                { cwd: TEMP_FOLDER },
-                (error, _stdout, stderr) => {
-                  if (error || stderr) {
-                    ffmpegProcess.kill();
-                    ffmpegReject(error || new Error(stderr));
-                  }
+              const ffmpegCommand = `ffmpeg
+                -f concat -i "${listFilename}"
+                -movflags faststart -pix_fmt yuv420p -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2"
+                "${outputFilename}"`.replace(/\n\s+/g, ' ');
+
+              const ffmpegProcess = exec(ffmpegCommand, { cwd: TEMP_FOLDER }, (error, _stdout, stderr) => {
+                if (error || stderr) {
+                  ffmpegProcess.kill();
+                  ffmpegReject(error || new Error(stderr));
                 }
-              );
+              });
 
               ffmpegProcess.on('error', (e) => ffmpegReject(e));
-              ffmpegProcess.on('exit', () => ffmpegResolve());
+              ffmpegProcess.on('exit', (code, signal) => {
+                if (!code) ffmpegResolve();
+                else
+                  ffmpegReject(
+                    new Error(
+                      `ffmpeg exited with code ${code}${signal ? `/signal ${signal}` : ''} (${
+                        ugoiraMeta?.body?.originalSrc
+                      })`
+                    )
+                  );
+              });
             })
         )
         .then(() => {
-          unlink(listFilepath).catch(() => {});
-          storedFiles.forEach((storedFile) => unlink(storedFile.tempFilepath).catch(() => {}));
-
           /** @type {import('../types/social-post').Media} */
           const ugoiraBuilt = {
             type: UGOIRA_MEDIA_FILETYPE,
@@ -99,6 +107,10 @@ const UgoiraBuilder = (ugoiraMeta, sourceZip) =>
           };
 
           return Promise.resolve(ugoiraBuilt);
+        })
+        .finally(() => {
+          unlink(listFilepath).catch(() => {});
+          storedFiles.forEach((storedFile) => unlink(storedFile.tempFilepath).catch(() => {}));
         });
     })
     .catch((e) => LogMessageOrError('UgoiraBuilder error:', e));
