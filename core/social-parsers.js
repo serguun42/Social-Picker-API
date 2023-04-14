@@ -1367,16 +1367,6 @@ const Joyreactor = (url) => {
         const imageWrappers = postContent.querySelectorAll('.image');
         if (!imageWrappers?.length) return Promise.resolve({});
 
-        const postDescription =
-          parsedHTML.getElementById('contentinner')?.querySelector('.post_description')?.innerText?.trim() || '';
-        const postTitle = postDescription.split('/')[0]?.trim();
-        const postTags = postDescription
-          .split('/')[1]
-          ?.trim()
-          .split('::')
-          .map((tag) => `#${tag.trim()}`)
-          .join(' ');
-
         const authorAnchor = parsedHTML.getElementById('contentinner')?.querySelector('.uhead_nick a');
         const author = authorAnchor?.innerText || '';
         const authorURL = authorAnchor?.getAttribute('href')
@@ -1387,53 +1377,51 @@ const Joyreactor = (url) => {
         const socialPost = {
           author,
           authorURL,
-          caption: postTitle || postTags,
+          caption: '',
           postURL: postGettingUrl,
           medias: imageWrappers
             .map((imageWrapper) => {
-              const fullAnchor = imageWrapper.querySelector('a');
-              const defaultImageElem = imageWrapper.querySelector('img');
-
               /** @type {import("../types/social-post").Media} */
               const media = {};
 
-              const defaultImage = ReactorPrepareUrl(defaultImageElem?.getAttribute('src'));
-              if (!defaultImage) return null;
+              const videoHolder = imageWrapper.querySelector('.video_holder');
 
-              media.type = 'photo';
-              media.externalUrl = FormViewerURL(defaultImage, SafeParseURL(defaultImage).origin);
+              if (videoHolder) {
+                const videoElem = imageWrapper.querySelector('video');
+                if (!videoElem) return null;
 
-              const full = ReactorPrepareUrl(fullAnchor?.getAttribute('href'));
-              const extension = (full || defaultImage).match(/\.(?<extension>\w+)$/i)?.groups?.extension;
-              media.filetype = extension;
+                /** Telegram sometimes cannot send .webm videos and gifs from .webm. If so, set to mp4 */
+                const matchingType = 'mp4';
+                media.type = videoElem.hasAttribute('muted') ? 'gif' : 'video';
 
-              if (full) {
-                if (extension === 'gif') {
-                  media.type = 'gif';
-                  media.externalUrl = FormViewerURL(full, SafeParseURL(full).origin);
+                const properSources = videoElem
+                  .querySelectorAll('source')
+                  .map((sourceElem) => ({
+                    url: sourceElem.getAttribute('src'),
+                    mimeType: sourceElem.getAttribute('type'),
+                  }))
+                  .filter((source) => !!source.url && new RegExp(`${matchingType}$`, 'i').test(source.mimeType));
 
-                  const videoElem = imageWrapper.querySelector('video');
-                  if (videoElem) {
-                    /** Telegram sometimes cannot send .webm videos and gifs from .webm. If so, set to mp4 */
-                    const matchingType = 'mp4';
+                const availableSource = ReactorPrepareUrl(properSources.pop()?.url);
+                if (availableSource) {
+                  media.filetype = matchingType;
+                  media.externalUrl = FormViewerURL(availableSource, SafeParseURL(availableSource).origin);
+                }
+              } else {
+                const fullAnchor = imageWrapper.querySelector('a');
+                const defaultImageElem = imageWrapper.querySelector('img');
 
-                    const properSources = videoElem
-                      .querySelectorAll('source')
-                      .map((sourceElem) => ({
-                        url: sourceElem.getAttribute('src'),
-                        mimeType: sourceElem.getAttribute('type'),
-                      }))
-                      .filter(({ mimeType }) => url && new RegExp(`${matchingType}$`, 'i').test(mimeType));
+                const defaultImage = ReactorPrepareUrl(defaultImageElem?.getAttribute('src'));
+                if (!defaultImage) return null;
 
-                    const availableSource = ReactorPrepareUrl(properSources.pop()?.url);
-                    if (availableSource) {
-                      media.filetype = matchingType;
-                      media.externalUrl = FormViewerURL(availableSource, SafeParseURL(availableSource).origin);
-                    }
-                  }
+                media.type = 'photo';
+                media.externalUrl = FormViewerURL(defaultImage, SafeParseURL(defaultImage).origin);
 
-                  media.original = media.externalUrl;
-                } else media.original = FormViewerURL(full, SafeParseURL(full).origin);
+                const full = ReactorPrepareUrl(fullAnchor?.getAttribute('href'));
+                const extension = (full || defaultImage).match(/\.(?<extension>\w+)$/i)?.groups?.extension;
+                media.filetype = extension;
+
+                if (full) media.original = FormViewerURL(full, SafeParseURL(full).origin);
               }
 
               return media;
