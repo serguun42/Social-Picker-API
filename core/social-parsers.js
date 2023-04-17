@@ -1336,6 +1336,7 @@ const Joyreactor = (url) => {
   const postGettingUrl = `https://joyreactor.cc/post/${postID}`;
 
   /**
+   * Adds protocol to trimmed URL from HTML, checks whether given URL is valid
    * @param {string} imageLink
    * @returns {string}
    */
@@ -1384,7 +1385,8 @@ const Joyreactor = (url) => {
               /** @type {import("../types/social-post").Media} */
               const media = {};
 
-              const videoHolder = imageWrapper.querySelector('.video_holder');
+              const videoHolder =
+                imageWrapper.querySelector('.video_holder') || imageWrapper.querySelector('.video_gif_holder');
 
               if (videoHolder) {
                 const videoElem = imageWrapper.querySelector('video');
@@ -1392,7 +1394,10 @@ const Joyreactor = (url) => {
 
                 /** Telegram sometimes cannot send .webm videos and gifs from .webm. If so, set to mp4 */
                 const matchingType = 'mp4';
-                media.type = videoElem.hasAttribute('muted') ? 'gif' : 'video';
+                media.type =
+                  videoElem.hasAttribute('muted') || videoHolder.classList.contains('video_gif_holder')
+                    ? 'gif'
+                    : 'video';
 
                 const properSources = videoElem
                   .querySelectorAll('source')
@@ -1406,6 +1411,17 @@ const Joyreactor = (url) => {
                 if (availableSource) {
                   media.filetype = matchingType;
                   media.externalUrl = FormViewerURL(availableSource, SafeParseURL(availableSource).origin);
+                  media.original = media.externalUrl;
+                }
+
+                if (videoHolder.classList.contains('video_gif_holder')) {
+                  const originalGifURL = ReactorPrepareUrl(
+                    videoHolder.querySelector('.video_gif_source')?.getAttribute('href')
+                  );
+
+                  if (originalGifURL)
+                    media.original = FormViewerURL(originalGifURL, SafeParseURL(originalGifURL).origin);
+                  if (!media.externalUrl && media.original) media.externalUrl = media.original;
                 }
               } else {
                 const fullAnchor = imageWrapper.querySelector('a');

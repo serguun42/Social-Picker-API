@@ -3,6 +3,7 @@ import { LoadServiceConfig } from './load-configs.js';
 const { CUSTOM_IMG_VIEWER_SERVICE } = LoadServiceConfig();
 
 /**
+ * Creates proxy URL for image storages with limited access
  * @param {string} link Original link from layout
  * @param {string} origin Site's origin or referer
  * @param {boolean} [useProxy] Apply proxy when viewer is loaded
