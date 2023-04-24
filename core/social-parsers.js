@@ -142,6 +142,7 @@ const Twitter = (url) => {
                   externalUrl: bestVariant.url,
                   original: bestVariant.url,
                   description: `${tweetMedium.width}x${tweetMedium.height}`,
+                  filetype: bestVariant.url.match(/\.(?<filetype>\w+)$/)?.groups?.filetype || 'mp4',
                 };
               }
 
