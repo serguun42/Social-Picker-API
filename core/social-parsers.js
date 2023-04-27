@@ -1164,10 +1164,12 @@ const Youtube = (url) => {
             socialPost.medias.push({
               type: 'audio',
               externalUrl: format.url,
-              filesize: format.filesize,
+              filesize: format.filesize || format.filesize_approx,
               filetype: format.ext,
               description: `${format.format_note} / ${format.acodec.split('.')[0]} (${format.ext}) – audio${
-                format.filesize ? ` / ${LocalHumanReadableSize(format.filesize)}` : ''
+                format.filesize || format.filesize_approx
+                  ? ` / ${LocalHumanReadableSize(format.filesize || format.filesize_approx)}`
+                  : ''
               }`,
             });
           else if (
@@ -1178,10 +1180,12 @@ const Youtube = (url) => {
             socialPost.medias.push({
               type: 'video',
               externalUrl: format.url,
-              filesize: format.filesize,
+              filesize: format.filesize || format.filesize_approx,
               filetype: format.ext,
               description: `${format.format_note} / ${format.vcodec.split('.')[0]} (${format.ext}) – video${
-                format.filesize ? ` / ${LocalHumanReadableSize(format.filesize)}` : ''
+                format.filesize || format.filesize_approx
+                  ? ` / ${LocalHumanReadableSize(format.filesize || format.filesize_approx)}`
+                  : ''
               }`,
             });
           else if (
@@ -1193,11 +1197,15 @@ const Youtube = (url) => {
             socialPost.medias.push({
               type: 'video',
               externalUrl: format.url,
-              filesize: format.filesize,
+              filesize: format.filesize || format.filesize_approx,
               filetype: format.ext,
               description: `${format.format_note} / ${format.vcodec.split('.')[0]} + ${format.acodec.split('.')[0]} (${
                 format.ext
-              }) – video + audio${format.filesize ? ` / ${LocalHumanReadableSize(format.filesize)}` : ''}`,
+              }) – video + audio${
+                format.filesize || format.filesize_approx
+                  ? ` / ${LocalHumanReadableSize(format.filesize || format.filesize_approx)}`
+                  : ''
+              }`,
             });
         });
 
