@@ -636,7 +636,11 @@ const Reddit = (url) => {
                 {
                   type: isGif ? 'gif' : 'photo',
                   externalUrl: isImgur
-                    ? (post.preview?.images?.[0]?.source?.url || '').replace(/&amp;/g, '&') || imageURL
+                    ? FormViewerURL(
+                        (post.preview?.images?.[0]?.source?.url || '').replace(/&amp;/g, '&') || imageURL,
+                        'https://www.reddit.com',
+                        true
+                      )
                     : imageURL,
                 },
               ]
