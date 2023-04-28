@@ -63,6 +63,7 @@ const CheckForLink = (givenURL) => {
   if (/^(m\.|img\d+\.)?(joy|safe|anime\.|porn|fap)?reactor\.(cc|com)$/.test(url.hostname))
     return { status: true, platform: 'Joyreactor', url };
   if (url.hostname === 'coub.com') return { status: true, platform: 'Coub', url };
+  if (/(\w+\.)?tiktok\.com$/.test(url.hostname)) return { status: true, platform: 'Tiktok', url };
 
   return { status: false, platform: '', url };
 };

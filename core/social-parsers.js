@@ -10,6 +10,8 @@ import LogMessageOrError from '../util/log.js';
 import { LoadServiceConfig, LoadTokensConfig } from '../util/load-configs.js';
 import UgoiraBuilder from '../util/ugoira-builder.js';
 import FormViewerURL from '../util/form-viewer-url.js';
+import HumanReadableSize from '../util/human-readable-size.js';
+import VideoCodecConvert from '../util/video-codec-convert.js';
 
 const { PROXY_HOSTNAME, PROXY_PORT } = LoadServiceConfig();
 const { TWITTER_OAUTH, INSTAGRAM_COOKIE, TUMBLR_OAUTH, JOYREACTOR_COOKIE } = LoadTokensConfig();
@@ -63,7 +65,7 @@ const TumblrClient = createClient({
 
 /** @type {import("yt-dlp-wrap").default} */
 // eslint-disable-next-line new-cap
-const youtubeClient = new YTDlpWrap.default();
+const ytDlpClient = new YTDlpWrap.default();
 
 /**
  * @param {URL} url
@@ -1116,44 +1118,33 @@ const Youtube = (url) => {
 
   const youtubeLink = `https://www.youtube.com/watch?v=${brevityDomainId || shortsId || regularId}`;
 
-  return youtubeClient
+  return ytDlpClient
     .execPromise([youtubeLink, '--dump-json'])
     .then(
-      (youtubeOut) =>
+      (ytDlpPlainOutput) =>
         new Promise((resolve, reject) => {
           try {
-            const parsedYoutubePage = JSON.parse(youtubeOut);
-            resolve(parsedYoutubePage);
+            const parsedYtDlp = JSON.parse(ytDlpPlainOutput);
+            resolve(parsedYtDlp);
           } catch (e) {
             reject(e);
           }
         })
     )
     .then(
-      /** @param {import("../types/youtube-video").YoutubeVideo} youtubeVideoOutput */ (youtubeVideoOutput) => {
+      /** @param {import("../types/yt-dlp").YtDlpOutput} ytDlpOutput */ (ytDlpOutput) => {
         /** @type {import("../types/social-post").SocialPost} */
         const socialPost = {
-          author: youtubeVideoOutput.uploader,
-          authorURL: youtubeVideoOutput.uploader_url,
-          caption:
-            youtubeVideoOutput.title +
-            (youtubeVideoOutput.description?.length < 50 ? youtubeVideoOutput.description : ''),
-          postURL: youtubeVideoOutput.webpage_url,
+          author: ytDlpOutput.uploader,
+          authorURL: ytDlpOutput.uploader_url,
+          caption: ytDlpOutput.title + (ytDlpOutput.description?.length < 50 ? `\n\n${ytDlpOutput.description}` : ''),
+          postURL: ytDlpOutput.webpage_url,
           medias: [],
         };
 
-        /**
-         * @param {number} bytes
-         * @returns {string}
-         */
-        const LocalHumanReadableSize = (bytes) => {
-          const power = Math.floor(Math.log(bytes) / Math.log(1024));
-          return `${(bytes / 1024 ** power).toFixed(2)} ${['B', 'kB', 'MB', 'GB', 'TB'][power]}`;
-        };
+        if (!ytDlpOutput.formats) return Promise.resolve(socialPost);
 
-        if (!youtubeVideoOutput.formats) return Promise.resolve(socialPost);
-
-        const sortedFormats = youtubeVideoOutput.formats.sort((prev, next) => prev.height - next.height);
+        const sortedFormats = ytDlpOutput.formats.sort((prev, next) => prev.height - next.height);
 
         sortedFormats.forEach((format) => {
           if (
@@ -1168,7 +1159,7 @@ const Youtube = (url) => {
               filetype: format.ext,
               description: `${format.format_note} / ${format.acodec.split('.')[0]} (${format.ext}) – audio${
                 format.filesize || format.filesize_approx
-                  ? ` / ${LocalHumanReadableSize(format.filesize || format.filesize_approx)}`
+                  ? ` / ${HumanReadableSize(format.filesize || format.filesize_approx)}`
                   : ''
               }`,
             });
@@ -1184,7 +1175,7 @@ const Youtube = (url) => {
               filetype: format.ext,
               description: `${format.format_note} / ${format.vcodec.split('.')[0]} (${format.ext}) – video${
                 format.filesize || format.filesize_approx
-                  ? ` / ${LocalHumanReadableSize(format.filesize || format.filesize_approx)}`
+                  ? ` / ${HumanReadableSize(format.filesize || format.filesize_approx)}`
                   : ''
               }`,
             });
@@ -1203,7 +1194,7 @@ const Youtube = (url) => {
                 format.ext
               }) – video + audio${
                 format.filesize || format.filesize_approx
-                  ? ` / ${LocalHumanReadableSize(format.filesize || format.filesize_approx)}`
+                  ? ` / ${HumanReadableSize(format.filesize || format.filesize_approx)}`
                   : ''
               }`,
             });
@@ -1557,6 +1548,124 @@ const Coub = (url) => {
     });
 };
 
+/**
+ * @param {URL} url
+ * @returns {Promise<import("../types/social-post").SocialPost>}
+ */
+const Tiktok = (url) => {
+  const isShortened = url.hostname !== 'tiktok.com' && url.hostname !== 'www.tiktok.com';
+  const pathParts = url.pathname.split('/').filter(Boolean);
+
+  if ((isShortened && pathParts.length !== 1) || (!isShortened && (pathParts[1] !== 'video' || !pathParts[2]))) {
+    LogMessageOrError(`Bad Tiktok video link: ${url.href}`);
+    return Promise.resolve({});
+  }
+
+  return ytDlpClient
+    .execPromise([url.href, '--dump-json'])
+    .then(
+      (ytDlpPlainOutput) =>
+        new Promise((resolve, reject) => {
+          try {
+            const parsedYtDlp = JSON.parse(ytDlpPlainOutput);
+            resolve(parsedYtDlp);
+          } catch (e) {
+            reject(e);
+          }
+        })
+    )
+    .then(
+      /** @param {import("../types/yt-dlp").YtDlpOutput} ytDlpOutput */ (ytDlpOutput) => {
+        /** @type {import("../types/social-post").SocialPost} */
+        const socialPost = {
+          author: ytDlpOutput.uploader,
+          authorURL: ytDlpOutput.uploader_url,
+          caption: ytDlpOutput.title + (ytDlpOutput.description?.length < 50 ? `\n\n${ytDlpOutput.description}` : ''),
+          postURL: ytDlpOutput.webpage_url,
+          medias: [],
+        };
+
+        const formatsWithBothVideoAudio = ytDlpOutput.formats.filter(
+          (format) =>
+            typeof format.vcodec === 'string' &&
+            format.vcodec !== 'none' &&
+            typeof format.acodec === 'string' &&
+            format.acodec !== 'none'
+        );
+        const formatsUniqueBySize = formatsWithBothVideoAudio.filter(
+          (format, index, array) =>
+            index ===
+            array.findIndex((comparing) => {
+              if ('filesize' in comparing || 'filesize' in format) return comparing.filesize === format.filesize;
+
+              return comparing.filesize_approx === format.filesize_approx;
+            })
+        );
+        const biggestH265Format = formatsUniqueBySize
+          .filter((format) => format.vcodec === 'h265')
+          .sort((prev, next) => (prev.filesize || prev.filesize_approx) - (next.filesize || next.filesize_approx))
+          .pop();
+        const formatToConvert = formatsWithBothVideoAudio
+          .filter(
+            (format) =>
+              format.vcodec === 'h265' &&
+              format.filesize === biggestH265Format.filesize &&
+              format.format_id !== biggestH265Format.format_id
+          )
+          .pop();
+        const legacyH264Formats = formatsUniqueBySize.filter((format) => format.vcodec === 'h264');
+        const formatsToSend = legacyH264Formats.concat(biggestH265Format).filter(Boolean);
+
+        formatsToSend.forEach((format) => {
+          socialPost.medias.push({
+            type: 'video',
+            externalUrl: format.url,
+            filesize: format.filesize || format.filesize_approx,
+            filetype: format.ext,
+            description: `${
+              format.width || format.format_id?.match(/^[^_]+_(?<width>\d+)/)?.groups?.width || '720'
+            }p / ${format.vcodec.split('.')[0]} + ${format.acodec.split('.')[0]} (${format.ext}) – video + audio${
+              format.filesize || format.filesize_approx
+                ? ` / ${HumanReadableSize(format.filesize || format.filesize_approx)}`
+                : ''
+            }${/watermark/i.test(format.format_note) ? ' / Watermarked' : ''}`,
+          });
+        });
+
+        if (legacyH264Formats.length) return Promise.resolve(socialPost);
+        if (!formatToConvert?.url) return Promise.resolve({});
+
+        const convertToExtension = 'mp4';
+        const convertToVideoCodec = 'h264';
+        const convertToAudioCodec = 'aac';
+        return VideoCodecConvert(formatToConvert.url, convertToExtension, convertToVideoCodec, convertToAudioCodec)
+          .then((convertedVideo) => {
+            if ('externalUrl' in convertedVideo) return Promise.resolve(socialPost);
+
+            socialPost.medias.push({
+              type: 'video',
+              otherSources: {
+                videoSource: formatToConvert.url,
+              },
+              filename: convertedVideo.filename,
+              filetype: formatToConvert.ext,
+              fileCallback: convertedVideo.fileCallback,
+              description: `${
+                formatToConvert.width ||
+                formatToConvert.format_id?.match(/^[^_]+_(?<width>\d+)/)?.groups?.width ||
+                '720'
+              }p / ${convertToVideoCodec} + ${convertToAudioCodec} (${convertToExtension}) – video + audio${
+                convertedVideo.filesize ? ` / ${HumanReadableSize(convertedVideo.filesize)}` : ''
+              } / Converted`,
+            });
+
+            return Promise.resolve(socialPost);
+          })
+          .catch(() => Promise.resolve(socialPost));
+      }
+    );
+};
+
 const ALL_PARSERS = {
   AnimePictures,
   Danbooru,
@@ -1578,6 +1687,7 @@ const ALL_PARSERS = {
   Osnova,
   Joyreactor,
   Coub,
+  Tiktok,
 };
 
 /** @typedef {keyof ALL_PARSERS} PlatformEnum */

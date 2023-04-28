@@ -35,3 +35,11 @@ export type VideoAudioMerged =
       videoSource: string;
       audioSource: string;
     };
+
+export type VideoCodecConverted =
+  | { externalUrl: string }
+  | {
+      filename: string;
+      fileCallback: () => void;
+      filesize?: number;
+    };

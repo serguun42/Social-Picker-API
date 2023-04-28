@@ -1,4 +1,4 @@
-export interface YoutubeVideo {
+export interface YtDlpOutput {
   id: string;
   title: string;
   formats: Format[];
@@ -186,4 +186,4 @@ export interface Version {
   repository: string;
 }
 
-export default YoutubeVideo;
+export default YtDlpOutput;

@@ -1,7 +1,7 @@
 {
   "name": "social-picker-api",
-  "version": "2.10.5",
-  "description": "Extract media from various posting platfroms like Twitter, Reddit, Pixiv, Youtube, Osnova and many others",
+  "version": "2.11.0",
+  "description": "Extract media from various posting platfroms like Twitter, Reddit, Pixiv, Youtube, Tiktok, Osnova and many others",
   "main": "social-picker-api.js",
   "type": "module",
   "scripts": {

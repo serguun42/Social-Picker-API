@@ -1,4 +1,3 @@
-/* eslint-disable new-cap */
 import { exec } from 'child_process';
 import { createHash } from 'crypto';
 import { resolve as pathResolve } from 'path';
@@ -72,7 +71,10 @@ const VideoAudioMerge = (video, audio, options = {}) => {
           });
 
           ffmpegProcess.on('error', (e) => ffmpegReject(e));
-          ffmpegProcess.on('exit', () => ffmpegResolve());
+          ffmpegProcess.on('exit', (code, signal) => {
+            if (!code) ffmpegResolve();
+            else ffmpegReject(new Error(`ffmpeg exited with code ${code}${signal ? `/signal ${signal}` : ''}`));
+          });
         })
     )
     .then(() => {

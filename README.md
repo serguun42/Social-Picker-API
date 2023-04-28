@@ -1,6 +1,6 @@
 # Social-Picker-API
 
-This project is used to extract media from various posting platforms like Twitter, Reddit, Pixiv, Youtube and many others. It's written for Node.js and it works as local service for other local services, e.g. [Anime Ultra Bot](https://github.com/serguun42/Anime-Ultra-Bot) or [Social Picker Vue](https://github.com/serguun42/Social-Picker-Vue).
+This project is used to extract media from various posting platforms like Twitter, Reddit, Pixiv, Youtube, Tiktok, Osnova and many others. It's written for Node.js and it works as local service for other local services, e.g. [Anime Ultra Bot](https://github.com/serguun42/Anime-Ultra-Bot) or [Social Picker Vue](https://github.com/serguun42/Social-Picker-Vue).
 
 Usage: give a link to the post and receive its content.
 
@@ -32,7 +32,10 @@ After launching you can access Picker with fetching it like `curl http://localho
 - _Pixiv's direct images_ – from `*.pximg.net`
 - _Reddit_ – images, videos, gifs and galleries. Uses [`video-audio-merge`](./util/video-audio-merge.js) for merging separate streams (via `ffmpeg`)
 - _Youtube_ – video with response in [default type](./types/social-post.d.ts) containing all streams (via `yt-dlp`)
+- _Coub_ – looped videos with linear audio. Uses [`video-audio-merge`](./util/video-audio-merge.js) for merging separate streams (via `ffmpeg`)
+- _Tiktok_ – Any video in multiple formats. Uses `yt-dlp` for extracting metadata and [`video-codec-convert`](./util/video-codec-convert.js) for creating H264 files with full definition from HEVC ones (via `ffmpeg`)
 - _Osnova_ – images, videos, gifs and galleries. Also extracts Twitter and Instagram blocks/links from within and handles them with parsers above
+- _Joyreactor_ – images and gifs from `[joy/safe/anime./etc…]reactor.сс` including `m.` subdomains and direct links to media files
 - _Tumblr_ – images and galleries
 - _Danbooru_ – images
 - _Gelbooru_ – images
@@ -43,8 +46,6 @@ After launching you can access Picker with fetching it like `curl http://localho
 - _Zerochan_ – images
 - _AnimePictures_ – images
 - _KemonoParty_ – images
-- _Joyreactor_ – images and gifs from `[joy/safe/anime./etc…]reactor.сс` including `m.` subdomains and direct links to media files
-- _Coub_ – looped videos with linear audio. Uses [`video-audio-merge`](./util/video-audio-merge.js) for merging separate streams (via `ffmpeg`)
 
 #### Some links
 
