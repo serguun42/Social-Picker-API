@@ -1368,10 +1368,13 @@ const Joyreactor = (url) => {
       referer: 'https://joyreactor.cc/',
       cookie: JOYREACTOR_COOKIE,
     },
-  }).then((res) => {
-    if (!res.ok) return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
+  })
+    .then((res) => {
+      if (!res.ok) return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
 
-    return res.text().then((joyreactorPage) => {
+      return res.text();
+    })
+    .then((joyreactorPage) => {
       try {
         const parsedHTML = parseHTML(joyreactorPage);
 
@@ -1384,14 +1387,16 @@ const Joyreactor = (url) => {
         const authorAnchor = parsedHTML.getElementById('contentinner')?.querySelector('.uhead_nick a');
         const author = authorAnchor?.innerText || '';
         const authorURL = authorAnchor?.getAttribute('href')
-          ? SafeParseURL(authorAnchor.getAttribute('href'), res.url)
+          ? SafeParseURL(authorAnchor.getAttribute('href'), postGettingUrl)
           : '';
+        const postTitle = parsedHTML.querySelector('.post_content > div:first-child > h3')?.innerText;
+        const firstTag = (parsedHTML.querySelector('.post_description')?.innerText || '').split(':')[0]?.trim();
 
         /** @type {import("../types/social-post").SocialPost} */
         const socialPost = {
           author,
           authorURL,
-          caption: '',
+          caption: postTitle || firstTag || '',
           postURL: postGettingUrl,
           medias: imageWrappers
             .map((imageWrapper) => {
@@ -1463,7 +1468,6 @@ const Joyreactor = (url) => {
         return Promise.reject(e);
       }
     });
-  });
 };
 
 /**
