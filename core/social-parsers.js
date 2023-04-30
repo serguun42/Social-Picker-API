@@ -1590,7 +1590,8 @@ const Tiktok = (url) => {
             typeof format.vcodec === 'string' &&
             format.vcodec !== 'none' &&
             typeof format.acodec === 'string' &&
-            format.acodec !== 'none'
+            format.acodec !== 'none' &&
+            !/\.mp3$/.test(format.url)
         );
         const formatsUniqueBySize = formatsWithBothVideoAudio.filter(
           (format, index, array) =>
