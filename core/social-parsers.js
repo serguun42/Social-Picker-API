@@ -1585,6 +1585,9 @@ const Tiktok = (url) => {
           medias: [],
         };
 
+        const isPhotoCardsPost = !ytDlpOutput.formats.some((format) => format.filesize);
+        if (isPhotoCardsPost) return Promise.resolve(socialPost);
+
         const formatsWithBothVideoAudio = ytDlpOutput.formats.filter(
           (format) =>
             typeof format.vcodec === 'string' &&
