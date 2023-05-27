@@ -14,7 +14,8 @@ import HumanReadableSize from '../util/human-readable-size.js';
 import VideoCodecConvert from '../util/video-codec-convert.js';
 
 const { PROXY_HOSTNAME, PROXY_PORT } = LoadServiceConfig();
-const { TWITTER_OAUTH, INSTAGRAM_COOKIE, TUMBLR_OAUTH, JOYREACTOR_COOKIE } = LoadTokensConfig();
+const { TWITTER_OAUTH, INSTAGRAM_COOKIE, INSTAGRAM_COOKIE_FILE_LOCATION, TUMBLR_OAUTH, JOYREACTOR_COOKIE } =
+  LoadTokensConfig();
 
 const PROXY_AGENT =
   PROXY_HOSTNAME && PROXY_PORT
@@ -205,77 +206,155 @@ const TwitterDirect = (url) => {
  * @returns {Promise<import("../types/social-post").SocialPost>}
  */
 const Instagram = (url) => {
-  const PATH_REGEXP = /^\/p\/([\w-]+)(\/)?$/i;
-  if (!PATH_REGEXP.test(url.pathname)) return Promise.resolve({});
+  const POST_PATHNAME_RX = /^\/p\/[\w-]+\/?$/i;
+  const REEL_PATHNAME_RX = /^\/reel\/[\w-]+\/?$/i;
 
-  return fetch(`https://${url.hostname}${url.pathname}?__a=1&__d=dis`, {
-    headers: {
-      ...DEFAULT_HEADERS,
-      referer: 'https://www.instagram.com/',
-      cookie: INSTAGRAM_COOKIE,
-    },
-    agent: PROXY_AGENT,
-  })
-    .then((res) => {
-      if (res.ok) return res.json();
-      return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
+  if (POST_PATHNAME_RX.test(url.pathname))
+    return fetch(`https://${url.hostname}${url.pathname}?__a=1&__d=dis`, {
+      headers: {
+        ...DEFAULT_HEADERS,
+        referer: 'https://www.instagram.com/',
+        cookie: INSTAGRAM_COOKIE,
+      },
+      agent: PROXY_AGENT,
     })
-    .then((graphData) => {
-      const post = graphData?.items?.[0];
+      .then((res) => {
+        if (res.ok) return res.json();
+        return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
+      })
+      .then((graphData) => {
+        const post = graphData?.items?.[0];
 
-      if (!post) return Promise.reject(new Error(`No post in... post: https://${url.hostname}${url.pathname}`));
+        if (!post) return Promise.reject(new Error(`No post in... post: https://${url.hostname}${url.pathname}`));
 
-      /** @type {import("../types/social-post").SocialPost} */
-      const socialPost = {
-        caption: post?.caption?.text || '',
-        postURL: `https://instagram.com${url.pathname}`,
-        author: post?.user?.username,
-        authorURL: `https://instagram.com/${post?.user?.username}`,
-      };
+        /** @type {import("../types/social-post").SocialPost} */
+        const socialPost = {
+          caption: post?.caption?.text || '',
+          postURL: `https://instagram.com${url.pathname}`,
+          author: post?.user?.username,
+          authorURL: `https://instagram.com/${post?.user?.username}`,
+        };
 
-      const singleVideo = post.video_versions;
-      const singleImage = post.image_versions2?.candidates;
-      const multipleMedia = post.carousel_media;
+        const singleVideo = post.video_versions;
+        const singleImage = post.image_versions2?.candidates;
+        const multipleMedia = post.carousel_media;
 
-      if (singleVideo) {
-        socialPost.medias = [
-          {
-            type: 'video',
-            externalUrl: singleVideo.sort((prev, next) => next.width - prev.width)?.[0]?.url,
-          },
-        ];
-      } else if (singleImage) {
-        socialPost.medias = [
-          {
-            type: 'photo',
-            externalUrl: singleImage.sort((prev, next) => next.width - prev.width)?.[0]?.url,
-          },
-        ];
-      } else if (multipleMedia) {
-        socialPost.medias = multipleMedia
-          .map(
-            /** @returns {import("../types/social-post").Media} */ (media) => {
-              if (!media) return null;
+        if (singleVideo) {
+          socialPost.medias = [
+            {
+              type: 'video',
+              externalUrl: singleVideo.sort((prev, next) => next.width - prev.width)?.[0]?.url,
+            },
+          ];
+        } else if (singleImage) {
+          socialPost.medias = [
+            {
+              type: 'photo',
+              externalUrl: singleImage.sort((prev, next) => next.width - prev.width)?.[0]?.url,
+            },
+          ];
+        } else if (multipleMedia) {
+          socialPost.medias = multipleMedia
+            .map(
+              /** @returns {import("../types/social-post").Media} */ (media) => {
+                if (!media) return null;
 
-              if (media.video_versions)
+                if (media.video_versions)
+                  return {
+                    type: 'video',
+                    externalUrl: media.video_versions?.pop()?.url,
+                  };
+
+                const candidates = media?.image_versions2?.candidates;
+
                 return {
-                  type: 'video',
-                  externalUrl: media.video_versions?.pop()?.url,
+                  type: 'photo',
+                  externalUrl: candidates.sort((prev, next) => next.width - prev.width)?.[0]?.url,
                 };
+              }
+            )
+            .filter(Boolean);
+        }
 
-              const candidates = media?.image_versions2?.candidates;
+        return Promise.resolve(socialPost);
+      });
 
-              return {
-                type: 'photo',
-                externalUrl: candidates.sort((prev, next) => next.width - prev.width)?.[0]?.url,
-              };
+  if (REEL_PATHNAME_RX.test(url.pathname))
+    return ytDlpClient
+      .execPromise([
+        url.href,
+        '--dump-json',
+        '--proxy',
+        `socks5://${PROXY_HOSTNAME}:${PROXY_PORT}`,
+        '--cookies',
+        INSTAGRAM_COOKIE_FILE_LOCATION,
+      ])
+      .then(
+        (ytDlpPlainOutput) =>
+          new Promise((resolve, reject) => {
+            try {
+              const parsedYtDlp = JSON.parse(ytDlpPlainOutput);
+              resolve(parsedYtDlp);
+            } catch (e) {
+              reject(e);
             }
-          )
-          .filter(Boolean);
-      }
+          })
+      )
+      .then(
+        /** @param {import("../types/yt-dlp").YtDlpOutput} ytDlpOutput */ (ytDlpOutput) => {
+          /** @type {import("../types/social-post").SocialPost} */
+          const socialPost = {
+            caption: ytDlpOutput.description || '',
+            postURL: ytDlpOutput.webpage_url,
+            author: ytDlpOutput.uploader,
+            authorURL: `https://instagram.com/${ytDlpOutput.uploader}`,
+            medias: [],
+          };
 
-      return Promise.resolve(socialPost);
-    });
+          const videoOnlyFormats = ytDlpOutput.formats.filter(
+            (format) =>
+              typeof format.vcodec === 'string' &&
+              format.vcodec !== 'none' &&
+              (typeof format.acodec !== 'string' || !format.acodec || format.acodec === 'none')
+          );
+          const bestVideoOnlyFormat = videoOnlyFormats
+            .sort((prev, next) => (prev.filesize || prev.filesize_approx) - (next.filesize || next.filesize_approx))
+            .pop();
+
+          const audioOnlyFormats = ytDlpOutput.formats.filter(
+            (format) =>
+              typeof format.acodec === 'string' &&
+              format.acodec !== 'none' &&
+              (typeof format.vcodec !== 'string' || !format.vcodec || format.vcodec === 'none')
+          );
+          const bestAudioOnlyFormat = audioOnlyFormats
+            .sort((prev, next) => (prev.filesize || prev.filesize_approx) - (next.filesize || next.filesize_approx))
+            .pop();
+
+          return VideoAudioMerge(bestVideoOnlyFormat?.url, bestAudioOnlyFormat?.url).then((videoResult) => {
+            if ('externalUrl' in videoResult)
+              socialPost.medias.push({
+                externalUrl: videoResult.externalUrl,
+                type: 'video',
+              });
+            else if ('filename' in videoResult)
+              socialPost.medias.push({
+                type: 'video',
+                otherSources: {
+                  audioSource: videoResult.audioSource,
+                  videoSource: videoResult.videoSource,
+                },
+                filename: videoResult.filename,
+                filetype: SafeParseURL(videoResult.videoSource).pathname.split('.').pop(),
+                fileCallback: videoResult.fileCallback,
+              });
+
+            return Promise.resolve(socialPost);
+          });
+        }
+      );
+
+  return Promise.resolve({});
 };
 
 /**

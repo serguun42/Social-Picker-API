@@ -7,5 +7,6 @@ package-lock.json
 *.sh
 *.dev.*
 !nodemon.dev.json
+config/*cookies.txt
 tsconfig.json
 types/post_version.d.ts
