@@ -214,10 +214,7 @@ const Instagram = (url) => {
       referer: 'https://www.instagram.com/',
       cookie: INSTAGRAM_COOKIE,
     },
-    referrerPolicy: 'strict-origin-when-cross-origin',
-    body: null,
-    method: 'GET',
-    mode: 'cors',
+    agent: PROXY_AGENT,
   })
     .then((res) => {
       if (res.ok) return res.json();
