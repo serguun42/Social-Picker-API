@@ -654,12 +654,19 @@ const Reddit = (url) => {
  * @returns {Promise<import("../types/social-post").SocialPost>}
  */
 const Tumblr = (url) => {
-  const blogID = url.hostname.replace(/\.tumblr\.(com|co\.\w+|org)$/i, '');
-  const postID = url.pathname.match(/^\/posts?\/(\d+)/i)?.[1];
+  const MAIN_DOMAIN_RX = /^\/(?<blogID>[^/]+)\/(?<postID>\d+)/i;
+  const API_PATH_BASE = '/v2/blog/__BLOG_ID__/posts/__POST_ID__';
+
+  const isSubdomain = /^\/posts?\//i.test(url.pathname);
+  const blogID = isSubdomain
+    ? url.hostname.replace(/\.tumblr\.(com|co\.\w+|org)$/i, '')
+    : url.pathname.match(MAIN_DOMAIN_RX)?.groups?.blogID;
+  const postID = isSubdomain
+    ? url.pathname.match(/^\/posts?\/(?<postID>\d+)/i)?.groups?.postID
+    : url.pathname.match(MAIN_DOMAIN_RX)?.groups?.postID;
 
   if (!blogID || !postID) return Promise.resolve({});
 
-  const API_PATH_BASE = `/v2/blog/__BLOG_ID__/posts/__POST_ID__`;
   const fetchingAPIPath = API_PATH_BASE.replace(/__BLOG_ID__/g, blogID).replace(/__POST_ID__/g, postID);
 
   return TumblrClient.getRequest(fetchingAPIPath, {}).then(
@@ -677,7 +684,7 @@ const Tumblr = (url) => {
         })
         .filter(Boolean)
         .map((image) => ({
-          type: 'photo',
+          type: /\.gif$/i.test(image.url) ? 'gif' : 'photo',
           externalUrl: image.url,
         }));
 
