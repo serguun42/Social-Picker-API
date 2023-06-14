@@ -1,5 +1,6 @@
+import { stat } from 'fs/promises';
+import { exec } from 'child_process';
 import fetch from 'node-fetch';
-import TwitterLite from 'twitter-lite';
 import { createClient } from 'tumblr.js';
 import YTDlpWrap from 'yt-dlp-wrap';
 import { parse as parseHTML } from 'node-html-parser';
@@ -14,7 +15,7 @@ import HumanReadableSize from '../util/human-readable-size.js';
 import VideoCodecConvert from '../util/video-codec-convert.js';
 
 const { PROXY_HOSTNAME, PROXY_PORT } = LoadServiceConfig();
-const { TWITTER_OAUTH, INSTAGRAM_COOKIE, INSTAGRAM_COOKIE_FILE_LOCATION, TUMBLR_OAUTH, JOYREACTOR_COOKIE } =
+const { TWITTER_SCAPPER, INSTAGRAM_COOKIE, INSTAGRAM_COOKIE_FILE_LOCATION, TUMBLR_OAUTH, JOYREACTOR_COOKIE } =
   LoadTokensConfig();
 
 const PROXY_AGENT =
@@ -37,28 +38,6 @@ const DEFAULT_HEADERS = {
   'upgrade-insecure-requests': '1',
 };
 
-/**
- * https://developer.twitter.com/en/portal/dashboard
- * https://developer.twitter.com/en/docs/authentication/oauth-1-0a/obtaining-user-access-tokens
- *
- * App Key === API Key === Consumer API Key === Consumer Key === Customer Key === oauth_consumer_key
- * App Key Secret === API Secret Key === Consumer Secret === Consumer Key === Customer Key === oauth_consumer_secret
- * Access token === Token === resulting oauth_token
- * Access token secret === Token Secret === resulting oauth_token_secret
- */
-/** @type {import("twitter-lite").TwitterOptions} */
-const TWITTER_CLIENT_CONFIG = {
-  version: '2',
-  extension: false,
-  consumer_key: TWITTER_OAUTH.consumer_key,
-  consumer_secret: TWITTER_OAUTH.consumer_secret,
-  access_token_key: TWITTER_OAUTH.access_token_key,
-  access_token_secret: TWITTER_OAUTH.access_token_secret,
-};
-
-/** @type {import("twitter-lite").default} */
-const TwitterClient = new TwitterLite(TWITTER_CLIENT_CONFIG);
-
 const TumblrClient = createClient({
   credentials: TUMBLR_OAUTH,
   returnPromises: true,
@@ -76,88 +55,64 @@ const Twitter = (url) => {
   const statusID = url.pathname.match(/^(?:\/[\w_]+)?\/status(?:es)?\/(\d+)/)?.[1];
   if (!statusID) return Promise.resolve({});
 
-  /**
-   * https://developer.twitter.com/en/docs/twitter-api/migrate/twitter-api-endpoint-map
-   * https://developer.twitter.com/en/docs/twitter-api/tweets/lookup/api-reference/get-tweets-id
-   */
-  return TwitterClient.get(`tweets/${statusID}`, {
-    expansions: ['author_id', 'attachments.media_keys'].join(','),
-    'tweet.fields': ['text', 'entities'].join(','),
-    'user.fields': ['id', 'name', 'username'].join(','),
-    'media.fields': ['media_key', 'type', 'url', 'width', 'height', 'variants'].join(','),
-  }).then(
-    /** @param {import("../types/twitter-v2").TwitterV2} twitterResponse */ (twitterResponse) => {
-      const tweetId = twitterResponse.data?.id;
-      if (!tweetId) return Promise.reject(new Error(`No tweet ID in twitterResponse`));
+  return stat(TWITTER_SCAPPER.binary_file_path)
+    .then((stats) => {
+      if (!stats.isFile()) return Promise.reject(new Error(`${TWITTER_SCAPPER.binary_file_path} is not a file`));
 
-      const trimmedText = (twitterResponse.data.text || '')
-        .replace(/\s?(?:https?:\/\/)?t.co\/\w+$/gi, '')
-        .replace(/\s+/gi, ' ')
-        .trim();
+      return new Promise((goBinaryResolve, goBinaryReject) => {
+        const goBinaryCommand = [
+          TWITTER_SCAPPER.binary_file_path,
+          'getTweet', // one of the methods
+          TWITTER_SCAPPER.cookies_file_path,
+          statusID,
+        ].join(' ');
 
-      const caption = twitterResponse.data.entities?.urls?.length
-        ? twitterResponse.data.entities.urls
-            .reduce(
-              (accumText, urlEntity) =>
-                accumText.replace(
-                  urlEntity.url,
-                  SafeParseURL(urlEntity.expanded_url).pathname.includes(`status/${tweetId}`)
-                    ? ''
-                    : urlEntity.expanded_url
-                ),
-              trimmedText
-            )
+        /** @type {string[]} */
+        const stdoutChunks = [];
+
+        const goBinaryProcess = exec(goBinaryCommand, { cwd: process.cwd() }, (error, stdout, stderr) => {
+          if (error || stderr) {
+            goBinaryProcess.kill();
+            goBinaryReject(error || new Error(stderr));
+          }
+        });
+
+        goBinaryProcess.stdout.on('data', (chunk) => {
+          stdoutChunks.push(chunk.toString());
+        });
+
+        goBinaryProcess.stderr.on('data', (chunk) => {
+          goBinaryReject(new Error(chunk.toString()));
+        });
+
+        goBinaryProcess.on('error', (e) => goBinaryReject(e));
+        goBinaryProcess.on('exit', (code, signal) => {
+          if (!code) goBinaryResolve(stdoutChunks.join(''));
+          else
+            goBinaryReject(
+              new Error(
+                `${TWITTER_SCAPPER.binary_file_path} exited with code ${code}${
+                  signal ? `/signal ${signal}` : ''
+                } (statusID ${statusID})`
+              )
+            );
+        });
+      });
+    })
+    .then(/** @param {string} readOutput */ (readOutput) => JSON.parse(readOutput))
+    .then(
+      /** @param {import('../types/social-post').SocialPost} parsedPost */ (parsedPost) => {
+        if (!parsedPost.medias?.length || !parsedPost.author || !parsedPost.authorURL) return Promise.resolve({});
+
+        if (typeof parsedPost.caption === 'string')
+          parsedPost.caption = parsedPost.caption
+            .replace(/\s?(?:https?:\/\/)?t.co\/\w+$/gi, '')
             .replace(/\s+/gi, ' ')
-            .trim()
-        : trimmedText;
+            .trim();
 
-      const user = (twitterResponse.includes?.users || []).find(
-        (includedUser) => includedUser.id === twitterResponse.data.author_id
-      );
-
-      /** @type {import("../types/social-post").SocialPost} */
-      const socialPost = {
-        caption,
-        author: user?.name,
-        authorURL: `https://twitter.com/${user?.username}`,
-        postURL: `https://twitter.com/${user?.username}/status/${tweetId}`,
-        medias: (twitterResponse.includes?.media || [])
-          .filter((tweetMedium) => twitterResponse.data.attachments?.media_keys?.includes(tweetMedium.media_key))
-          .map(
-            /** @returns {import("../types/social-post").Media */ (tweetMedium) => {
-              if (tweetMedium.type === 'photo')
-                return {
-                  type: 'photo',
-                  externalUrl: tweetMedium.url,
-                  original: `${tweetMedium.url}:orig`,
-                  description: `${tweetMedium.width}x${tweetMedium.height}`,
-                };
-
-              if (tweetMedium.type === 'video' || tweetMedium.type === 'animated_gif') {
-                const bestVariant = tweetMedium.variants
-                  .filter((variant) => 'bit_rate' in variant || tweetMedium.type === 'animated_gif')
-                  .sort((prev, next) => prev.bit_rate - next.bit_rate)
-                  .pop();
-
-                if (!bestVariant?.url) return null;
-                return {
-                  type: tweetMedium.type === 'animated_gif' ? 'gif' : 'video',
-                  externalUrl: bestVariant.url,
-                  original: bestVariant.url,
-                  description: `${tweetMedium.width}x${tweetMedium.height}`,
-                  filetype: bestVariant.url.match(/\.(?<filetype>\w+)$/)?.groups?.filetype || 'mp4',
-                };
-              }
-
-              return null;
-            }
-          )
-          .filter(Boolean),
-      };
-
-      return Promise.resolve(socialPost);
-    }
-  );
+        return Promise.resolve(parsedPost);
+      }
+    );
 };
 
 /**

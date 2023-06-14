@@ -24,18 +24,15 @@ After launching you can access Picker with fetching it like `curl http://localho
 
 ### List of platforms
 
-- _Twitter_ – images, videos and gifs
-- _Twitter's direct media_ – from `*.twimg.com`
-- _Nitter_ – Twitter clone
-- _Instagram_ – images, videos, galleries and Reels
-- _Pixiv_ – images and _Ugoira_-gifs. Uses external service for end-user viewing of high-res images due to Referer Header issues. Uses [`ugoira-builder`](./util/ugoira-builder.js) for creating mp4 video from Ugoira zip (via `ffmpeg`)
-- _Pixiv's direct images_ – from `*.pximg.net`
+- _Twitter_ – images, videos, gifs and direct media from `*.twimg.com`. Read [Twitter](#Twee)
+- _Pixiv_ – images, single direct media from `*.pximg.net` and _Ugoira_-gifs. Uses external service for end-user viewing of high-res images due to Referer Header issues. Uses [`ugoira-builder`](./util/ugoira-builder.js) for creating mp4 video from Ugoira zip (via `ffmpeg`)
 - _Reddit_ – images, videos, gifs and galleries. Uses [`video-audio-merge`](./util/video-audio-merge.js) for merging separate streams (via `ffmpeg`)
 - _Youtube_ – video with response in [default type](./types/social-post.d.ts) containing all streams (via `yt-dlp`)
 - _Coub_ – looped videos with linear audio. Uses [`video-audio-merge`](./util/video-audio-merge.js) for merging separate streams (via `ffmpeg`)
 - _Tiktok_ – Any video in multiple formats. Uses `yt-dlp` for extracting metadata and [`video-codec-convert`](./util/video-codec-convert.js) for creating H264 files with full definition from HEVC ones (via `ffmpeg`)
 - _Osnova_ – images, videos, gifs and galleries. Also extracts Twitter and Instagram blocks/links from within and handles them with parsers above
-- _Joyreactor_ – images and gifs from `[joy/safe/anime./etc…]reactor.сс` including `m.` subdomains and direct links to media files
+- _Joyreactor_ – images and gifs from multiple subdomains and direct links to media files
+- _Instagram_ – images, videos, galleries and Reels
 - _Tumblr_ – images and galleries
 - _Danbooru_ – images
 - _Gelbooru_ – images
@@ -47,7 +44,14 @@ After launching you can access Picker with fetching it like `curl http://localho
 - _AnimePictures_ – images
 - _KemonoParty_ – images
 
-#### Some links
+### Twitter specific
+
+This project uses [Social Picker Twitter Scrapper](https://github.com/serguun42/Social-Picker-Twitter-Scrapper) – wrapper in Go to fetch tweets without API. For this you should consider reading that project README and placing its compiled and created files into such folders:
+
+- Place executable file `Social-Picker-Twitter-Scrapper` in [`bin`](./bin/) folder
+- Place generated `cookies.json` in [`config`](./config/) folder with accordance to [tokens.json](./config/tokens.json) (`TWITTER_SCAPPER.cookies_file_path`)
+
+### Some links
 
 - [Telegram bot based on this service](https://github.com/serguun42/Anime-Ultra-Bot)
 - [Telegram Bots API](https://core.telegram.org/bots/api)
@@ -56,3 +60,7 @@ After launching you can access Picker with fetching it like `curl http://localho
 - [ffmpeg](https://ffmpeg.org/ffmpeg.html)
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp)
 - [Osnova API](https://cmtt-ru.github.io/osnova-api/)
+
+---
+
+### [BSL-1.0 License](./LICENSE)

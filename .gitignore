@@ -6,7 +6,12 @@ package-lock.json
 *.bat
 *.sh
 *.dev.*
+*.local.*
 !nodemon.dev.json
 config/*cookies.txt
+config/twitter-scrapper-*.json
 tsconfig.json
 types/post_version.d.ts
+
+bin/*
+!bin/.gitkeep

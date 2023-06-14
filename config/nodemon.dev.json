@@ -3,5 +3,5 @@
 	"env": {
 		"NODE_ENV": "development"
 	},
-	"ignore": ["out"]
+	"ignore": ["out", "config"]
 }
