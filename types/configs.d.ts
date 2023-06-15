@@ -15,9 +15,9 @@ export type TokensConfig = {
     cookies_file_path: string;
   };
   /** Cookies from browser */
-  INSTAGRAM_COOKIE: string;
+  INSTAGRAM_COOKIE_ONE_LINE_FOR_POSTS: string;
   /** Netscape cookies file location for Reels/yt-dlp */
-  INSTAGRAM_COOKIE_FILE_LOCATION: string;
+  INSTAGRAM_COOKIE_FILE_LOCATION_FOR_REELS: string;
   TUMBLR_OAUTH: {
     consumer_key: string;
     consumer_secret: string;

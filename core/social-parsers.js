@@ -15,7 +15,7 @@ import HumanReadableSize from '../util/human-readable-size.js';
 import VideoCodecConvert from '../util/video-codec-convert.js';
 
 const { PROXY_HOSTNAME, PROXY_PORT } = LoadServiceConfig();
-const { TWITTER_SCAPPER, INSTAGRAM_COOKIE, INSTAGRAM_COOKIE_FILE_LOCATION, TUMBLR_OAUTH, JOYREACTOR_COOKIE } =
+const { TWITTER_SCAPPER, INSTAGRAM_COOKIE_ONE_LINE_FOR_POSTS, INSTAGRAM_COOKIE_FILE_LOCATION_FOR_REELS, TUMBLR_OAUTH, JOYREACTOR_COOKIE } =
   LoadTokensConfig();
 
 const PROXY_AGENT =
@@ -169,7 +169,7 @@ const Instagram = (url) => {
       headers: {
         ...DEFAULT_HEADERS,
         referer: 'https://www.instagram.com/',
-        cookie: INSTAGRAM_COOKIE,
+        cookie: INSTAGRAM_COOKIE_ONE_LINE_FOR_POSTS,
       },
       agent: PROXY_AGENT,
     })
@@ -242,7 +242,7 @@ const Instagram = (url) => {
         '--proxy',
         `socks5://${PROXY_HOSTNAME}:${PROXY_PORT}`,
         '--cookies',
-        INSTAGRAM_COOKIE_FILE_LOCATION,
+        INSTAGRAM_COOKIE_FILE_LOCATION_FOR_REELS,
       ])
       .then(
         (ytDlpPlainOutput) =>
