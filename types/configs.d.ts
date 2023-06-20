@@ -3,7 +3,9 @@ export type ConfigName = 'service' | 'tokens';
 export type ServiceConfig = {
   PORT: number;
   CUSTOM_IMG_VIEWER_SERVICE: string;
+  /** Set to `null` to connect directly */
   PROXY_HOSTNAME?: string;
+  /** Set to `null` to connect directly */
   PROXY_PORT?: number;
 };
 

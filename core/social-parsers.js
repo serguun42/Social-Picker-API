@@ -15,8 +15,13 @@ import HumanReadableSize from '../util/human-readable-size.js';
 import VideoCodecConvert from '../util/video-codec-convert.js';
 
 const { PROXY_HOSTNAME, PROXY_PORT } = LoadServiceConfig();
-const { TWITTER_SCAPPER, INSTAGRAM_COOKIE_ONE_LINE_FOR_POSTS, INSTAGRAM_COOKIE_FILE_LOCATION_FOR_REELS, TUMBLR_OAUTH, JOYREACTOR_COOKIE } =
-  LoadTokensConfig();
+const {
+  TWITTER_SCAPPER,
+  INSTAGRAM_COOKIE_ONE_LINE_FOR_POSTS,
+  INSTAGRAM_COOKIE_FILE_LOCATION_FOR_REELS,
+  TUMBLR_OAUTH,
+  JOYREACTOR_COOKIE,
+} = LoadTokensConfig();
 
 const PROXY_AGENT =
   PROXY_HOSTNAME && PROXY_PORT
@@ -234,16 +239,19 @@ const Instagram = (url) => {
         return Promise.resolve(socialPost);
       });
 
-  if (REEL_PATHNAME_RX.test(url.pathname))
+  if (REEL_PATHNAME_RX.test(url.pathname)) {
+    /** @type {string[]} */
+    const ytDlpArgs = [
+      url.href,
+      '--dump-json',
+      PROXY_HOSTNAME && PROXY_PORT ? '--proxy' : null,
+      PROXY_HOSTNAME && PROXY_PORT ? `socks5://${PROXY_HOSTNAME}:${PROXY_PORT}` : null,
+      '--cookies',
+      INSTAGRAM_COOKIE_FILE_LOCATION_FOR_REELS,
+    ].filter(Boolean);
+
     return ytDlpClient
-      .execPromise([
-        url.href,
-        '--dump-json',
-        '--proxy',
-        `socks5://${PROXY_HOSTNAME}:${PROXY_PORT}`,
-        '--cookies',
-        INSTAGRAM_COOKIE_FILE_LOCATION_FOR_REELS,
-      ])
+      .execPromise(ytDlpArgs)
       .then(
         (ytDlpPlainOutput) =>
           new Promise((resolve, reject) => {
@@ -262,7 +270,7 @@ const Instagram = (url) => {
             caption: ytDlpOutput.description || '',
             postURL: ytDlpOutput.webpage_url,
             author: ytDlpOutput.uploader,
-            authorURL: `https://instagram.com/${ytDlpOutput.uploader}`,
+            authorURL: `https://instagram.com/${ytDlpOutput.uploader_url || ''}`,
             medias: [],
           };
 
@@ -308,6 +316,7 @@ const Instagram = (url) => {
           });
         }
       );
+  }
 
   return Promise.resolve({});
 };
