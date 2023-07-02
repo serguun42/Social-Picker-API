@@ -1,6 +1,6 @@
 import { createServer, STATUS_CODES, IncomingMessage, ServerResponse } from 'node:http';
 import mime from 'mime-types';
-import SocialParser from './platforms/social-parsers.js';
+import GenericSocialParser from './parsers/generic.js';
 import CheckForLink from './util/check-for-link.js';
 import LoadConfig from './util/load-configs.js';
 import LogMessageOrError from './util/log.js';
@@ -46,7 +46,7 @@ createServer((req, res) => {
   const checkedForLink = CheckForLink(queries.url);
   if (!checkedForLink.status || !checkedForLink.url || !checkedForLink.platform) return SendCode(res, 404);
 
-  const platformResponse = SocialParser(checkedForLink.platform, checkedForLink.url);
+  const platformResponse = GenericSocialParser(checkedForLink.platform, checkedForLink.url);
   if (!platformResponse) return SendCode(res, 404);
 
   return platformResponse

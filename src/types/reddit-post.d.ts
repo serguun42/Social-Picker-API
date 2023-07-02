@@ -34,6 +34,7 @@ export interface RedditVideo {
 }
 
 export interface ChildData {
+  is_gallery: boolean;
   approved_at_utc: unknown;
   subreddit: string;
   selftext: string;

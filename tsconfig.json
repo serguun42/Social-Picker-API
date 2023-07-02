@@ -14,7 +14,8 @@
       "node"
     ],
     "lib": [
-      "ES2022"
+      "ES2022",
+      "DOM"
     ],
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,

@@ -16,8 +16,8 @@ type VideoAudioMergeOptions = {
 };
 
 export default function VideoAudioMerge(
-  videoURL: string,
-  audioURL: string,
+  videoURL: string | undefined,
+  audioURL: string | undefined,
   options: VideoAudioMergeOptions = {}
 ): Promise<VideoAudioMerged> {
   if (!videoURL) return Promise.reject(new Error('No video URL'));

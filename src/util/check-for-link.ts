@@ -1,4 +1,4 @@
-import { PlatformEnum } from '../platforms/social-parsers.js';
+import { PlatformEnum } from '../parsers/generic.js';
 import { SafeParseURL } from './urls.js';
 
 const CheckForLink = (givenURL: string): { status: boolean; platform: PlatformEnum | null; url: URL } => {

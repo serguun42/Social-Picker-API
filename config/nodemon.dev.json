@@ -1,7 +1,12 @@
 {
-	"verbose": false,
-	"env": {
-		"NODE_ENV": "development"
-	},
-	"ignore": ["out", "config"]
+  "verbose": false,
+  "execMap": {
+    "ts": "ts-node --esm --project tsconfig.json",
+    "js": "node"
+  },
+  "ext": "ts,js,cjs,mjs,json",
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "ignore": ["dist", "out", "config"]
 }

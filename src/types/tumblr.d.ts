@@ -35,7 +35,7 @@ export interface Content {
   text: string;
 }
 
-export interface Tumblr {
+export interface TumblrPost {
   object_type: string;
   type: string;
   id: string;

@@ -64,7 +64,7 @@ export type PostAkaIllust = {
   commentOff: number;
 };
 
-type Urls = {
+export type Urls = {
   mini: string;
   thumb: string;
   small: string;
