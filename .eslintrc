@@ -6,11 +6,14 @@
 	"extends": [
 		"eslint:recommended",
 		"airbnb-base",
-		"plugin:prettier/recommended"
+		"airbnb-typescript/base",
+		"plugin:prettier/recommended",
+		"plugin:@typescript-eslint/recommended"
 	],
 	"parserOptions": {
 		"ecmaVersion": 2022,
-		"sourceType": "module"
+		"sourceType": "module",
+		"project": "./tsconfig.json"
 	},
 	"plugins": [
 		"prettier",
@@ -39,6 +42,7 @@
 		]
 	},
 	"ignorePatterns": [
-		"out/"
+		"out/",
+		"dist/"
 	]
 }

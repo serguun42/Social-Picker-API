@@ -1,13 +1,14 @@
 {
   "name": "social-picker-api",
-  "version": "2.14.2",
+  "version": "3.0.0",
   "description": "Extract media from various posting platfroms like Twitter, Reddit, Pixiv, Youtube, Tiktok, Osnova and many others",
-  "main": "social-picker-api.js",
+  "main": "dist/main.js",
   "type": "module",
   "scripts": {
-    "production": "pm2 start config/pm2.production.json",
-    "dev": "nodemon social-picker-service.js --config config/nodemon.dev.json",
-    "lint": "eslint . --ext .js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore"
+    "dev": "nodemon src/main.ts --config config/nodemon.dev.json",
+    "lint": "eslint . --ext .ts,.js,.cjs,.mjs --fix --ignore-path .gitignore",
+    "compile": "tsc --project tsconfig.json",
+    "production": "pm2 start config/pm2.production.json"
   },
   "repository": {
     "type": "git",
@@ -32,23 +33,29 @@
   "author": "serguun42",
   "license": "BSL-1.0 License",
   "dependencies": {
+    "@types/mime-types": "^2.1.1",
+    "@types/node": "^20.3.3",
     "jszip": "^3.10.1",
-    "node-fetch": "^3.3.0",
-    "node-html-parser": "^6.1.4",
+    "mime-types": "^2.1.35",
+    "node-fetch": "^3.3.1",
+    "node-html-parser": "^6.1.5",
     "pm2": "^5.3.0",
-    "socks-proxy-agent": "^7.0.0",
+    "socks-proxy-agent": "^8.0.1",
     "tumblr.js": "^3.0.0",
+    "typescript": "^5.1.6",
     "yt-dlp-wrap": "^2.3.11"
   },
   "devDependencies": {
-    "@types/node": "^18.11.0",
-    "eslint": "^8.25.0",
+    "@typescript-eslint/eslint-plugin": "^5.60.1",
+    "@typescript-eslint/parser": "^5.60.1",
+    "eslint": "^8.44.0",
     "eslint-config-airbnb-base": "^15.0.0",
-    "eslint-config-prettier": "^8.5.0",
-    "eslint-plugin-import": "^2.26.0",
+    "eslint-config-airbnb-typescript": "^17.0.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-plugin-import": "^2.27.5",
     "eslint-plugin-prettier": "^4.2.1",
-    "nodemon": "^2.0.20",
-    "prettier": "^2.7.1",
-    "typescript": "^4.8.4"
+    "nodemon": "^2.0.22",
+    "prettier": "^2.8.8",
+    "ts-node": "^10.9.1"
   }
 }
