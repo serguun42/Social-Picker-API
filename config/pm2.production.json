@@ -1,7 +1,7 @@
 {
 	"apps": [{
 		"name"				: "social-picker-api",
-		"script"			: "./social-picker-service.js",
+		"script"			: "./dist/main.js",
 		"watch"				: false,
 		"append"			: true,
 		"sourceDir"			: "./",

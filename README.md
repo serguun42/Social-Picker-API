@@ -1,6 +1,6 @@
-# Social-Picker-API
+# Social Picker API
 
-This project is used to extract media from various posting platforms like Twitter, Reddit, Pixiv, Youtube, Tiktok, Osnova and many others. It's written for Node.js and it works as local service for other local services, e.g. [Anime Ultra Bot](https://github.com/serguun42/Anime-Ultra-Bot) or [Social Picker Vue](https://github.com/serguun42/Social-Picker-Vue).
+Extract media from various posting platforms like Twitter, Reddit, Pixiv, Youtube, Tiktok, Osnova and many others. This project written in Typescript for Node.js and it works as REST service for other services, e.g. [Anime Ultra Bot](https://github.com/serguun42/Anime-Ultra-Bot) or [Social Picker Vue](https://github.com/serguun42/Social-Picker-Vue).
 
 ## Usage
 
@@ -11,7 +11,7 @@ Start a server, make HTTP-request to it with a link to the post and receive that
 There are some configuration files:
 
 - [`service.json`](./config/service.json) – service port, base URL of external service for viewing some and proxy for some platforms – see [_Platform specific/Proxies_](#proxies)
-- [`tokens.json`](./config/tokens.json) – tokens for platforms and other filepaths. See [_Platform specific_](#platform-specific) and [types with comments](./types/configs.d.ts)
+- [`tokens.json`](./config/tokens.json) – tokens for platforms and other filepaths. See [_Platform specific_](#platform-specific) and [types with comments](./src/types/configs.d.ts)
 - [`pm2.production.json`](./config/pm2.production.json) – config for `pm2` daemon
 - Other configuration files for particular platforms – see [_Platform specific_](#platform-specific)
 
@@ -19,9 +19,10 @@ Development config files can be created and placed along production ones (e.g. `
 
 ## How to run
 
-1. Install necessary dependencies – `npm i --production`
+1. Install necessary dependencies – `npm i --omit=dev`
 2. [_Install necessary binaries needed for some platforms_](#binaries)
-3. Start server – `npm run production`
+3. Compile Typescript – `npm run compile`
+4. Start server – `npm run production`
 
 After launching you can access Picker with fetching it like `curl http://localhost:8080/?url=__LINK_TO_ANY_POST__` (change `8080` to real port you specified in [`service.json`](./config/service.json)).
 
@@ -34,7 +35,7 @@ If you're planning opening your Picker instance to the world, I'd suggest creati
 - _Twitter_ – images, videos, GIFs and direct media from `*.twimg.com`. [_More details_](#twitter)
 - _Pixiv_ – images, single direct media from `*.pximg.net` and _Ugoira_-GIFs. [_More details_](#pixiv)
 - _Reddit_ – images, videos, GIFs and galleries. [_More details_](#reddit)
-- _Youtube_ – video with response in [default type](./types/social-post.d.ts) containing all streams (via `yt-dlp`)
+- _Youtube_ – video with response in [default type](./src/types/social-post.d.ts) containing all streams (via `yt-dlp`)
 - _Tiktok_ – Any video in multiple formats. [_More details_](#tiktok)
 - _Instagram_ – images, videos, galleries and Reels. [_More details_](#instagram)
 - _Osnova_ – images, videos, GIFs and galleries. [_More details_](#osnova)
@@ -80,17 +81,17 @@ This project uses [Social Picker Twitter Scrapper](https://github.com/serguun42/
 
 Supports images, single direct media from `*.pximg.net` and _Ugoira_-GIFs.
 
-Uses external service for end-user viewing of high-res images due to Referer Header issues. Uses [`ugoira-builder`](./util/ugoira-builder.js) for creating mp4 video from Ugoira ZIP with PNGs (via `ffmpeg`).
+Uses external service for end-user viewing of high-res images due to Referer Header issues. Uses [`ugoira-builder`](./src/util/ugoira-builder.ts) for creating mp4 video from Ugoira ZIP with PNGs (via `ffmpeg`).
 
 #### Reddit
 
-Supports images, videos, GIFs and galleries. Because Reddit's videos are divided from audios, this app utilizes [`video-audio-merge`](./util/video-audio-merge.js) for merging separated streams (via `ffmpeg`).
+Supports images, videos, GIFs and galleries. Because Reddit's videos are divided from audios, this app utilizes [`video-audio-merge`](./src/util/video-audio-merge.ts) for merging separated streams (via `ffmpeg`).
 
 #### Tiktok
 
 Any video in multiple formats. Does not support image galleries.
 
-Uses `yt-dlp` for extracting metadata and then [`video-codec-convert`](./util/video-codec-convert.js) to convert original highest quality HEVC video without watermark to H264 file (via `ffmpeg`) for compatibility. Still prioritizes HEVC one.
+Uses `yt-dlp` for extracting metadata and then [`video-codec-convert`](./src/util/video-codec-convert.ts) to convert original highest quality HEVC video without watermark to H264 file (via `ffmpeg`) for compatibility. Still prioritizes HEVC one.
 
 #### Instagram
 
@@ -114,7 +115,7 @@ Supports images, videos, GIFs and galleries. Also extracts Twitter and Instagram
 
 #### Coub
 
-Creates looped videos with linear audio, limits itself only with audio length and filesize if it ever exceed a reasonable size (20 MB). Uses [`video-audio-merge`](./util/video-audio-merge.js) for merging separated streams (via `ffmpeg`).
+Creates looped videos with linear audio, limits itself only with audio length and filesize if it ever exceed a reasonable size (20 MB). Uses [`video-audio-merge`](./src/util/video-audio-merge.ts) for merging separated streams (via `ffmpeg`).
 
 #### Tumblr
 
