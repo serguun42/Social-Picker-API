@@ -10,8 +10,7 @@ import { Media } from '../types/social-post.js';
 const TEMP_FOLDER = process.env.TEMP || '/tmp/';
 
 const UGOIRA_FILE_EXTENSION = 'mp4';
-/** @type {import('../types/social-post').Media['type']} */
-const UGOIRA_MEDIA_FILETYPE = 'gif';
+const UGOIRA_MEDIA_FILETYPE: Media['type'] = 'gif';
 
 /** Builds video sequence from Ugoira */
 export default function UgoiraBuilder(ugoiraMeta: UgoiraMeta, sourceZip: ArrayBuffer): Promise<Media | null> {

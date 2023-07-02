@@ -24,7 +24,6 @@ export default function Pixiv(
   };
 
   const pageMatch = url.pathname.match(PIXIV_PAGE_RX);
-  /** @type {string} */
   const illustId = pageMatch?.groups?.illustId || url.searchParams.get('illust_id');
   if (!illustId) return Promise.resolve(undefined);
 

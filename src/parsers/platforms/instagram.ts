@@ -52,21 +52,7 @@ export default function Instagram(url: URL): Promise<SocialPost | undefined> {
         const singleImage = post.image_versions2?.candidates;
         const multipleMedia = post.carousel_media;
 
-        if (singleVideo) {
-          socialPost.medias = [
-            {
-              type: 'video',
-              externalUrl: singleVideo.sort((prev, next) => next.width - prev.width)?.[0]?.url,
-            },
-          ];
-        } else if (singleImage) {
-          socialPost.medias = [
-            {
-              type: 'photo',
-              externalUrl: singleImage.sort((prev, next) => next.width - prev.width)?.[0]?.url,
-            },
-          ];
-        } else if (multipleMedia) {
+        if (multipleMedia) {
           socialPost.medias = multipleMedia
             .map((media): Media | null => {
               if (!media) return null;
@@ -85,6 +71,20 @@ export default function Instagram(url: URL): Promise<SocialPost | undefined> {
               };
             })
             .filter((media): media is Media => !!media);
+        } else if (singleVideo) {
+          socialPost.medias = [
+            {
+              type: 'video',
+              externalUrl: singleVideo.sort((prev, next) => next.width - prev.width)?.[0]?.url,
+            },
+          ];
+        } else if (singleImage) {
+          socialPost.medias = [
+            {
+              type: 'photo',
+              externalUrl: singleImage.sort((prev, next) => next.width - prev.width)?.[0]?.url,
+            },
+          ];
         }
 
         return Promise.resolve(socialPost);

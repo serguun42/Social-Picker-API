@@ -31,9 +31,7 @@ export default function Joyreactor(url: URL): Promise<SocialPost | undefined> {
   url.hostname = url.hostname.replace('m.', '');
   const postGettingUrl = `https://joyreactor.cc/post/${postID}`;
 
-  /**
-   * Adds protocol to trimmed URL from HTML, checks whether given URL is valid
-   */
+  /** Adds protocol to trimmed URL from HTML, checks whether given URL is valid */
   const ReactorPrepareUrl = (imageLink: string | undefined): string => {
     if (!imageLink || typeof imageLink !== 'string') return '';
 
