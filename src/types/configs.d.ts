@@ -1,5 +1,3 @@
-export type ConfigName = 'service' | 'tokens';
-
 export type ServiceConfig = {
   PORT: number;
   CUSTOM_IMG_VIEWER_SERVICE: string;
@@ -29,4 +27,11 @@ export type TokensConfig = {
   JOYREACTOR_COOKIE: string;
 };
 
-export type GenericConfig = ServiceConfig | TokensConfig;
+export type Configs = {
+  service: ServiceConfig;
+  tokens: TokensConfig;
+};
+
+export type ConfigName = keyof Configs;
+
+export type GenericConfig<T extends ConfigName> = Configs[T];

@@ -4,12 +4,12 @@ export default RedditPost;
 export interface RedditPostSection {
   kind: string;
   data: {
-    after: any;
+    after: unknown;
     dist: number;
     modhash: string;
     geo_filter: string;
     children: Child[];
-    before: any;
+    before: unknown;
   };
 }
 
@@ -34,101 +34,101 @@ export interface RedditVideo {
 }
 
 export interface ChildData {
-  approved_at_utc: any;
+  approved_at_utc: unknown;
   subreddit: string;
   selftext: string;
-  user_reports: any[];
+  user_reports: unknown[];
   saved: boolean;
-  mod_reason_title: any;
+  mod_reason_title: unknown;
   gilded: number;
   clicked: boolean;
   title: string;
-  link_flair_richtext: any[];
+  link_flair_richtext: unknown[];
   subreddit_name_prefixed: string;
   hidden: boolean;
   pwls: number;
   link_flair_css_class: string;
   downs: number;
   thumbnail_height: number;
-  top_awarded_type: any;
+  top_awarded_type: unknown;
   parent_whitelist_status: string;
   hide_score: boolean;
   name: string;
   quarantine: boolean;
   link_flair_text_color: string;
   upvote_ratio: number;
-  author_flair_background_color: any;
+  author_flair_background_color: unknown;
   ups: number;
   domain: string;
-  media_embed: MediaEmbed;
+  media_embed: object;
   thumbnail_width: number;
   author_flair_template_id: string;
   is_original_content: boolean;
   author_fullname: string;
   is_reddit_media_domain: boolean;
   is_meta: boolean;
-  category: any;
-  secure_media_embed: SecureMediaEmbed;
+  category: unknown;
+  secure_media_embed: object;
   link_flair_text: string;
   can_mod_post: boolean;
   score: number;
-  approved_by: any;
+  approved_by: unknown;
   is_created_from_ads_ui: boolean;
   author_premium: boolean;
   thumbnail: string;
   edited: boolean;
   author_flair_css_class: string;
-  author_flair_richtext: any[];
-  gildings: Gildings;
+  author_flair_richtext: unknown[];
+  gildings: object;
   post_hint: string;
-  content_categories: any;
+  content_categories: unknown;
   is_self: boolean;
   subreddit_type: string;
   created: number;
   link_flair_type: string;
   wls: number;
-  removed_by_category: any;
-  banned_by: any;
+  removed_by_category: unknown;
+  banned_by: unknown;
   author_flair_type: string;
   total_awards_received: number;
   allow_live_comments: boolean;
-  selftext_html: any;
-  likes: any;
-  suggested_sort: any;
-  banned_at_utc: any;
+  selftext_html: unknown;
+  likes: unknown;
+  suggested_sort: unknown;
+  banned_at_utc: unknown;
   url_overridden_by_dest: string;
-  view_count: any;
+  view_count: unknown;
   archived: boolean;
   no_follow: boolean;
   is_crosspostable: boolean;
   pinned: boolean;
   over_18: boolean;
   preview: Preview;
-  all_awardings: any[];
-  awarders: any[];
+  all_awardings: unknown[];
+  awarders: unknown[];
   media_only: boolean;
   link_flair_template_id: string;
   can_gild: boolean;
   spoiler: boolean;
   locked: boolean;
   author_flair_text: string;
-  treatment_tags: any[];
+  treatment_tags: unknown[];
   visited: boolean;
-  removed_by: any;
-  mod_note: any;
-  distinguished: any;
+  removed_by: unknown;
+  mod_note: unknown;
+  distinguished: unknown;
   subreddit_id: string;
   author_is_blocked: boolean;
-  mod_reason_by: any;
-  num_reports: any;
-  removal_reason: any;
+  mod_reason_by: unknown;
+  num_reports: unknown;
+  removal_reason: unknown;
   link_flair_background_color: string;
   id: string;
   is_robot_indexable: boolean;
   num_duplicates: number;
-  report_reasons: any;
+  report_reasons: unknown;
   author: string;
-  discussion_type: any;
+  discussion_type: unknown;
   num_comments: number;
   send_replies: boolean;
   contest_mode: boolean;
@@ -141,7 +141,7 @@ export interface ChildData {
   subreddit_subscribers: number;
   created_utc: number;
   num_crossposts: number;
-  mod_reports: any[];
+  mod_reports: unknown[];
   is_video: boolean;
 
   media?: { reddit_video: RedditVideo };
@@ -187,12 +187,6 @@ export interface ChildData {
   /** Crosspost parent, `t3_ACTUALID` */
   crosspost_parent?: string;
 }
-
-export interface MediaEmbed {}
-
-export interface SecureMediaEmbed {}
-
-export interface Gildings {}
 
 export interface Preview {
   images: Image[];

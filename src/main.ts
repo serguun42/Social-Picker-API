@@ -1,114 +1,80 @@
-import { STATUS_CODES, createServer } from 'http';
-import SocialParser from './core/social-parsers.js';
+import { createServer, STATUS_CODES, IncomingMessage, ServerResponse } from 'node:http';
+import mime from 'mime-types';
+import SocialParser from './platforms/social-parsers.js';
 import CheckForLink from './util/check-for-link.js';
-import { LoadServiceConfig } from './util/load-configs.js';
+import LoadConfig from './util/load-configs.js';
 import LogMessageOrError from './util/log.js';
 import { SafeParseURL, ParseQuery } from './util/urls.js';
 import DEV from './util/is-dev.js';
 
-const { PORT } = LoadServiceConfig();
+const { PORT } = LoadConfig('service');
 
-/**
- * @param {{[code: string]: string}} statusCodes
- * @returns {{[code: number]: string}}
- */
-const GetStatusCodes = (statusCodes) => {
-  const newCodes = {};
+const VideoHooksStorage: { [filename: string]: () => void } = {};
 
-  Object.keys(statusCodes).forEach((code) => {
-    newCodes[code] = `${code} ${statusCodes[code]}`;
-  });
+const SendPayload = (res: ServerResponse<IncomingMessage>, code: number, data: string | Buffer | object) => {
+  res.statusCode = code;
 
-  return newCodes;
+  if (data instanceof Buffer || typeof data === 'string') {
+    const dataToSend = data.toString();
+    res.end(dataToSend);
+  } else {
+    const dataToSend = JSON.stringify(data);
+    res.setHeader('Content-Type', mime.contentType('json') || '');
+    res.end(dataToSend);
+  }
 };
 
-/**
- * HTTP Response Statuses
- * @type {{[code: number]: string}}
- */
-const STATUSES = GetStatusCodes(STATUS_CODES);
-
-/**
- * @type {{ [combinedFilename: string]: () => string }}
- */
-const VideoHooksStorage = {};
+const SendCode = (res: ServerResponse<IncomingMessage>, code: number) => {
+  res.statusCode = code || 500;
+  res.end(`${code || 500} ${STATUS_CODES[code || 500]}`);
+};
 
 createServer((req, res) => {
   const queries = ParseQuery(SafeParseURL(req.url).search);
 
-  res.setHeader('Content-Type', 'charset=UTF-8');
-
-  /**
-   * @param {number} code
-   * @param {string | Buffer | ReadStream | Object} data
-   * @returns {false}
-   */
-  const SendObject = (code, data) => {
-    res.statusCode = code;
-
-    if (data instanceof Buffer || typeof data === 'string') {
-      const dataToSend = data.toString();
-
-      res.end(dataToSend);
-    } else {
-      const dataToSend = JSON.stringify(data);
-      res.setHeader('Content-Type', 'application/json; charset=UTF-8');
-
-      res.end(dataToSend);
-    }
-
-    return false;
-  };
-
-  /**
-   * @param {number} code
-   * @returns {false}
-   */
-  const SendStatus = (code) => {
-    res.statusCode = code || 200;
-    res.end(STATUSES[code || 200]);
-    return false;
-  };
+  res.setHeader('Content-Type', mime.contentType('txt') || '');
 
   /** Hook for deleting combined videos when they are sent */
   if (queries['video-done']) {
     if (typeof VideoHooksStorage[queries['video-done']] === 'function') VideoHooksStorage[queries['video-done']]();
 
-    return SendStatus(200);
+    return SendCode(res, 200);
   }
 
-  if (typeof queries.url === 'string') {
-    const checkedForLink = CheckForLink(queries.url);
-    if (!checkedForLink.status || !checkedForLink.url || !checkedForLink.platform) return SendStatus(404);
+  if (typeof queries.url !== 'string') return SendCode(res, 404);
 
-    const platformResponse = SocialParser(checkedForLink.platform, checkedForLink.url);
-    if (!platformResponse) return SendStatus(404);
+  const checkedForLink = CheckForLink(queries.url);
+  if (!checkedForLink.status || !checkedForLink.url || !checkedForLink.platform) return SendCode(res, 404);
 
-    return platformResponse
-      .then((socialPost) => {
-        if (!socialPost?.medias) return SendStatus(404);
+  const platformResponse = SocialParser(checkedForLink.platform, checkedForLink.url);
+  if (!platformResponse) return SendCode(res, 404);
 
-        socialPost.medias.forEach((media) => {
-          if (!media.fileCallback) return;
+  return platformResponse
+    .then((socialPost) => {
+      if (!socialPost?.medias) return SendCode(res, 404);
 
-          /** Storing hook for deleting combined videos */
-          VideoHooksStorage[media.filename] = media.fileCallback;
+      socialPost.medias.forEach((media) => {
+        const { fileCallback, filename } = media;
 
-          /** Deleting video in 5 minutes in any case */
-          setTimeout(() => {
-            media.fileCallback();
-            delete VideoHooksStorage[media.filename];
-          }, 1000 * 60 * 5);
-        });
+        if (typeof fileCallback !== 'function') return;
+        if (typeof filename !== 'string') return;
 
-        return SendObject(200, socialPost);
-      })
-      .catch((e) => {
-        LogMessageOrError(e);
-        SendStatus(500);
+        /** Storing hook for deleting combined videos */
+        VideoHooksStorage[filename] = fileCallback;
+
+        /** Deleting video in 5 minutes in any case */
+        setTimeout(() => {
+          fileCallback();
+          delete VideoHooksStorage[filename];
+        }, 1000 * 60 * 5);
       });
-  }
-  return SendStatus(404);
+
+      return SendPayload(res, 200, socialPost);
+    })
+    .catch((e: Error) => {
+      LogMessageOrError(e);
+      SendCode(res, 500);
+    });
 }).listen(PORT);
 
 if (DEV) process.stdout.write(`\x1BcStarted dev instance on http://localhost:${PORT}/?url=DEFAULT\n`);

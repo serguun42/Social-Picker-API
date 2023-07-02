@@ -1,30 +1,24 @@
-import { exec } from 'child_process';
-import { createHash } from 'crypto';
-import { resolve as pathResolve } from 'path';
-import { createWriteStream } from 'fs';
-import { unlink, stat } from 'fs/promises';
-import { pipeline } from 'stream/promises';
+import { exec } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { resolve as pathResolve } from 'node:path';
+import { createWriteStream } from 'node:fs';
+import { unlink, stat } from 'node:fs/promises';
+import { pipeline } from 'node:stream/promises';
 import fetch from 'node-fetch';
 import LogMessageOrError from './log.js';
+import { VideoCodecConverted } from '../types/social-post.js';
 
 const TEMP_FOLDER = process.env.TEMP || '/tmp/';
 
-/**
- * @param {string} sourceVideoURL
- * @param {string} [targetExtension] `mp4` or any other supported
- * @param {string} [targetVideoCodec] `h264`, 'copy` or any other supported
- * @param {string} [targetAudioCodec] `copy`, `aac` or any other supported
- * @returns {Promise<import('../types/social-post').VideoCodecConverted>}
- */
-const VideoCodecConvert = (
-  sourceVideoURL,
-  targetExtension = 'mp4',
-  targetVideoCodec = 'h264',
-  targetAudioCodec = 'copy'
-) => {
-  if (!sourceVideoURL) return Promise.reject(new Error('No video URL'));
+export default function VideoCodecConvert(
+  videoURL: string,
+  /** `mp4` or any other supported */ targetExtension = 'mp4',
+  /** `h264`, 'copy` or any other supported */ targetVideoCodec = 'h264',
+  /** `copy`, `aac` or any other supported */ targetAudioCodec = 'copy'
+): Promise<VideoCodecConverted> {
+  if (!videoURL) return Promise.reject(new Error('No video URL'));
 
-  const baseFilename = `socialpicker_${createHash('sha256').update(`${sourceVideoURL}_${Date.now()}`).digest('hex')}`;
+  const baseFilename = `socialpicker_${createHash('sha256').update(`${videoURL}_${Date.now()}`).digest('hex')}`;
   const inputFilename = pathResolve(TEMP_FOLDER, `${baseFilename}_in`);
   const outputFilename = pathResolve(TEMP_FOLDER, `${baseFilename}_out.${targetExtension}`);
 
@@ -36,10 +30,11 @@ const VideoCodecConvert = (
     unlink(outputFilename).catch(() => {});
   };
 
-  return fetch(sourceVideoURL)
+  return fetch(videoURL)
     .then((response) => {
       if (response.status !== 200)
-        return Promise.reject(new Error(`Response status on video (${sourceVideoURL}) is ${response.status}`));
+        return Promise.reject(new Error(`Response status on video (${videoURL}) is ${response.status}`));
+      if (!response.body) return Promise.reject(new Error(`Cannot read body stream on video (${videoURL})`));
 
       return pipeline(response.body, createWriteStream(inputFilename));
     })
@@ -59,7 +54,7 @@ const VideoCodecConvert = (
 
           ffmpegProcess.on('error', (e) => ffmpegReject(e));
           ffmpegProcess.on('exit', (code, signal) => {
-            if (!code) ffmpegResolve();
+            if (!code) ffmpegResolve(0);
             else ffmpegReject(new Error(`ffmpeg exited with code ${code}${signal ? `/signal ${signal}` : ''}`));
           });
         })
@@ -86,8 +81,6 @@ const VideoCodecConvert = (
       LogMessageOrError(e);
       DeleteTempFile();
       DeleteConvertedFile();
-      return Promise.resolve({ externalUrl: sourceVideoURL });
+      return Promise.resolve({ externalUrl: videoURL });
     });
-};
-
-export default VideoCodecConvert;
+}

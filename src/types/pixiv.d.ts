@@ -43,24 +43,24 @@ export type PostAkaIllust = {
   bookStyle: number;
   isHowto: boolean;
   isOriginal: boolean;
-  imageResponseOutData: any[];
-  imageResponseData: any[];
+  imageResponseOutData: unknown[];
+  imageResponseData: unknown[];
   imageResponseCount: number;
-  pollData: any;
-  seriesNavData: any;
-  descriptionBoothId: any;
-  descriptionYoutubeId: any;
-  comicPromotion: any;
-  fanboxPromotion: any;
-  contestBanners: any[];
+  pollData: unknown;
+  seriesNavData: unknown;
+  descriptionBoothId: unknown;
+  descriptionYoutubeId: unknown;
+  comicPromotion: unknown;
+  fanboxPromotion: unknown;
+  contestBanners: unknown[];
   isBookmarkable: boolean;
-  bookmarkData: any;
-  contestData: any;
+  bookmarkData: unknown;
+  contestData: unknown;
   zoneConfig: ZoneConfig;
   extraData: { meta: Meta };
   titleCaptionTranslation: TitleCaptionTranslation3;
   isUnlisted: boolean;
-  request: any;
+  request: unknown;
   commentOff: number;
 };
 
@@ -105,7 +105,7 @@ type UserIllust = {
   height: number;
   pageCount: number;
   isBookmarkable: boolean;
-  bookmarkData: any;
+  bookmarkData: unknown;
   alt: string;
   titleCaptionTranslation: TitleCaptionTranslation;
   createDate: string;
@@ -115,8 +115,8 @@ type UserIllust = {
 };
 
 type TitleCaptionTranslation = {
-  workTitle: any;
-  workCaption: any;
+  workTitle: unknown;
+  workCaption: unknown;
 };
 
 type ZoneConfig = {
@@ -153,8 +153,8 @@ type Twitter = {
 };
 
 type TitleCaptionTranslation3 = {
-  workTitle: any;
-  workCaption: any;
+  workTitle: unknown;
+  workCaption: unknown;
 };
 
 type User = {
@@ -166,11 +166,11 @@ type User = {
   isFollowed: boolean;
   isMypixiv: boolean;
   isBlocking: boolean;
-  background: any;
-  sketchLiveId: any;
+  background: unknown;
+  sketchLiveId: unknown;
   partial: number;
   acceptRequest: boolean;
-  sketchLives: any[];
+  sketchLives: unknown[];
 };
 
 export type UgoiraMeta = {

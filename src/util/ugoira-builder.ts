@@ -1,9 +1,11 @@
-import { exec } from 'child_process';
-import { createHash } from 'crypto';
-import { resolve } from 'path';
-import { unlink, writeFile } from 'fs/promises';
+import { exec } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { resolve } from 'node:path';
+import { unlink, writeFile } from 'node:fs/promises';
 import JSZip from 'jszip';
 import LogMessageOrError from './log.js';
+import { UgoiraMeta } from '../types/pixiv.js';
+import { Media } from '../types/social-post.js';
 
 const TEMP_FOLDER = process.env.TEMP || '/tmp/';
 
@@ -11,18 +13,12 @@ const UGOIRA_FILE_EXTENSION = 'mp4';
 /** @type {import('../types/social-post').Media['type']} */
 const UGOIRA_MEDIA_FILETYPE = 'gif';
 
-/**
- * Builds video sequence from Ugoira
- * @param {import('../types/pixiv').UgoiraMeta} ugoiraMeta
- * @param {ArrayBuffer} sourceZip
- * @returns {Promise<import('../types/social-post').Media>}
- */
-const UgoiraBuilder = (ugoiraMeta, sourceZip) =>
-  new JSZip()
+/** Builds video sequence from Ugoira */
+export default function UgoiraBuilder(ugoiraMeta: UgoiraMeta, sourceZip: ArrayBuffer): Promise<Media | null> {
+  return new JSZip()
     .loadAsync(sourceZip)
     .then(async (zipAsObject) => {
-      /** @type {{ [filename: string]: number }} */
-      const ugoiraDelays = {};
+      const ugoiraDelays: { [filename: string]: number } = {};
       ugoiraMeta.body.frames.forEach((frame) => {
         ugoiraDelays[frame.file] = frame.delay;
       });
@@ -31,8 +27,7 @@ const UgoiraBuilder = (ugoiraMeta, sourceZip) =>
       const outputFilename = `socialpicker_${hash}_output.${UGOIRA_FILE_EXTENSION}`;
       const outputFilepath = resolve(TEMP_FOLDER, outputFilename);
 
-      /** @type {{ filename: string, tempFilename: string, tempFilepath: string }[]} */
-      const storedFiles = [];
+      const storedFiles: { filename: string; tempFilename: string; tempFilepath: string }[] = [];
 
       // eslint-disable-next-line no-restricted-syntax, guard-for-in
       for (const filename in zipAsObject.files) {
@@ -80,7 +75,7 @@ const UgoiraBuilder = (ugoiraMeta, sourceZip) =>
 
               ffmpegProcess.on('error', (e) => ffmpegReject(e));
               ffmpegProcess.on('exit', (code, signal) => {
-                if (!code) ffmpegResolve();
+                if (!code) ffmpegResolve(0);
                 else
                   ffmpegReject(
                     new Error(
@@ -93,8 +88,7 @@ const UgoiraBuilder = (ugoiraMeta, sourceZip) =>
             })
         )
         .then(() => {
-          /** @type {import('../types/social-post').Media} */
-          const ugoiraBuilt = {
+          const ugoiraBuilt: Media = {
             type: UGOIRA_MEDIA_FILETYPE,
             externalUrl: ugoiraMeta.body.originalSrc,
             original: ugoiraMeta.body.originalSrc,
@@ -113,6 +107,8 @@ const UgoiraBuilder = (ugoiraMeta, sourceZip) =>
           storedFiles.forEach((storedFile) => unlink(storedFile.tempFilepath).catch(() => {}));
         });
     })
-    .catch((e) => LogMessageOrError('UgoiraBuilder error:', e));
-
-export default UgoiraBuilder;
+    .catch((e) => {
+      LogMessageOrError('UgoiraBuilder error:', e);
+      return Promise.resolve(null);
+    });
+}

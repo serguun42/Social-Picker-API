@@ -1,10 +1,7 @@
+import { PlatformEnum } from '../platforms/social-parsers.js';
 import { SafeParseURL } from './urls.js';
 
-/**
- * @param {string} givenURL
- * @returns {{ status: boolean, platform: import('../core/social-parsers').PlatformEnum, url: URL }}
- */
-const CheckForLink = (givenURL) => {
+const CheckForLink = (givenURL: string): { status: boolean; platform: PlatformEnum | null; url: URL } => {
   const url = SafeParseURL(givenURL);
 
   if (
@@ -65,7 +62,7 @@ const CheckForLink = (givenURL) => {
   if (url.hostname === 'coub.com') return { status: true, platform: 'Coub', url };
   if (/(\w+\.)?tiktok\.com$/.test(url.hostname)) return { status: true, platform: 'Tiktok', url };
 
-  return { status: false, platform: '', url };
+  return { status: false, platform: null, url };
 };
 
 export default CheckForLink;

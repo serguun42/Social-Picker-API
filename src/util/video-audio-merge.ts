@@ -6,27 +6,26 @@ import { unlink } from 'fs/promises';
 import { pipeline } from 'stream/promises';
 import fetch from 'node-fetch';
 import LogMessageOrError from './log.js';
+import { VideoAudioMerged } from '../types/social-post.js';
 
 const TEMP_FOLDER = process.env.TEMP || '/tmp/';
 
-/**
- * @typedef {Object} VideoAudioMergeOptions
- * @property {boolean} [loopVideo]
- * @property {boolean} [loopAudio]
- */
-/**
- * @param {string} video
- * @param {string} audio
- * @param {VideoAudioMergeOptions} [options]
- * @returns {Promise<import('../types/social-post').VideoAudioMerged>}
- */
-const VideoAudioMerge = (video, audio, options = {}) => {
-  if (!video) return Promise.reject(new Error('No video URL'));
-  if (!audio) return Promise.resolve({ externalUrl: video });
+type VideoAudioMergeOptions = {
+  loopVideo?: boolean | undefined;
+  loopAudio?: boolean | undefined;
+};
 
-  const videoBaseFilename = `socialpicker_${createHash('sha256').update(`${video}_${Date.now()}`).digest('hex')}`;
+export default function VideoAudioMerge(
+  videoURL: string,
+  audioURL: string,
+  options: VideoAudioMergeOptions = {}
+): Promise<VideoAudioMerged> {
+  if (!videoURL) return Promise.reject(new Error('No video URL'));
+  if (!audioURL) return Promise.resolve({ externalUrl: videoURL });
+
+  const videoBaseFilename = `socialpicker_${createHash('sha256').update(`${videoURL}_${Date.now()}`).digest('hex')}`;
   const videoFilename = pathResolve(TEMP_FOLDER, `${videoBaseFilename}_video`);
-  const videoFiletype = video.replace(/\?.*$/, '').match(/\.(\w+)$/)?.[1] || 'mp4';
+  const videoFiletype = videoURL.replace(/\?.*$/, '').match(/\.(\w+)$/)?.[1] || 'mp4';
   const audioFilename = pathResolve(TEMP_FOLDER, `${videoBaseFilename}_audio`);
   const mergedFilename = pathResolve(TEMP_FOLDER, `${videoBaseFilename}_out.${videoFiletype}`);
 
@@ -39,17 +38,19 @@ const VideoAudioMerge = (video, audio, options = {}) => {
     unlink(mergedFilename).catch(() => {});
   };
 
-  return fetch(video)
+  return fetch(videoURL)
     .then((response) => {
       if (response.status !== 200)
-        return Promise.reject(new Error(`Response status on video (${video}) is ${response.status}`));
+        return Promise.reject(new Error(`Response status on video (${videoURL}) is ${response.status}`));
+      if (!response.body) return Promise.reject(new Error(`Cannot read body stream on video (${videoURL})`));
 
       return pipeline(response.body, createWriteStream(videoFilename));
     })
-    .then(() => fetch(audio))
+    .then(() => fetch(audioURL))
     .then((response) => {
       if (response.status !== 200)
-        return Promise.reject(new Error(`Response status on audio (${audio}) is ${response.status}`));
+        return Promise.reject(new Error(`Response status on audio (${audioURL}) is ${response.status}`));
+      if (!response.body) return Promise.reject(new Error(`Cannot read body stream on video (${audioURL})`));
 
       return pipeline(response.body, createWriteStream(audioFilename));
     })
@@ -72,7 +73,7 @@ const VideoAudioMerge = (video, audio, options = {}) => {
 
           ffmpegProcess.on('error', (e) => ffmpegReject(e));
           ffmpegProcess.on('exit', (code, signal) => {
-            if (!code) ffmpegResolve();
+            if (!code) ffmpegResolve(0);
             else ffmpegReject(new Error(`ffmpeg exited with code ${code}${signal ? `/signal ${signal}` : ''}`));
           });
         })
@@ -83,16 +84,14 @@ const VideoAudioMerge = (video, audio, options = {}) => {
       return Promise.resolve({
         filename: mergedFilename,
         fileCallback: DeleteMergedFile,
-        videoSource: video,
-        audioSource: audio,
+        videoSource: videoURL,
+        audioSource: audioURL,
       });
     })
     .catch((e) => {
       LogMessageOrError(e);
       DeleteTempFiles();
       DeleteMergedFile();
-      return Promise.resolve({ externalUrl: video });
+      return Promise.resolve({ externalUrl: videoURL });
     });
-};
-
-export default VideoAudioMerge;
+}

@@ -1,0 +1,1 @@
+C:/Serge/TJ/cacher-frontend-react/types/osnova-post-sub-telegram.d.ts

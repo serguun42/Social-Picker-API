@@ -1,13 +1,13 @@
 export interface CoubPost {
-  flag: any;
-  abuses: any;
-  recoubs_by_users_channels: any;
+  flag: unknown;
+  abuses: unknown;
+  recoubs_by_users_channels: unknown;
   favourite: boolean;
-  promoted_id: any;
-  recoub: any;
-  like: any;
-  dislike: any;
-  reaction: any;
+  promoted_id: unknown;
+  recoub: unknown;
+  like: unknown;
+  dislike: unknown;
+  reaction: unknown;
   in_my_best2015: boolean;
   id: number;
   type: string;
@@ -20,8 +20,8 @@ export interface CoubPost {
   updated_at: string;
   is_done: boolean;
   views_count: number;
-  cotd: any;
-  cotd_at: any;
+  cotd: unknown;
+  cotd_at: unknown;
   visible_on_explore_root: boolean;
   visible_on_explore: boolean;
   featured: boolean;
@@ -33,7 +33,7 @@ export interface CoubPost {
   is_editable: boolean;
   original_sound: boolean;
   has_sound: boolean;
-  recoub_to: any;
+  recoub_to: unknown;
   file_versions: FileVersions;
   audio_versions: Versions;
   image_versions: Versions;
@@ -52,13 +52,13 @@ export interface CoubPost {
   global_safe: boolean;
   audio_file_url: string;
   external_download: boolean;
-  application: any;
+  application: unknown;
   channel: Channel;
-  file: any;
+  file: unknown;
   picture: string;
   timeline_picture: string;
   small_picture: string;
-  sharing_picture: any;
+  sharing_picture: unknown;
   percent_done: number;
   tags: Tag[];
   categories: Category[];
@@ -68,7 +68,7 @@ export interface CoubPost {
   remixes_count: number;
   likes_count: number;
   comments_count: number;
-  translated_title: any;
+  translated_title: unknown;
   dislikes_count: number;
   raw_video_id: number;
   uploaded_by_ios_app: boolean;
@@ -79,17 +79,17 @@ export interface CoubPost {
   video_block_banned: boolean;
   duration: number;
   promo_winner: boolean;
-  promo_winner_recoubers: any;
-  editorial_info: EditorialInfo;
-  promo_hint: any;
-  beeline_best_2014: any;
+  promo_winner_recoubers: unknown;
+  editorial_info: unknown;
+  promo_hint: unknown;
+  beeline_best_2014: unknown;
   from_web_editor: boolean;
   normalize_sound: boolean;
   normalize_change_allowed: boolean;
   best2015_addable: boolean;
-  ahmad_promo: any;
-  promo_data: any;
-  audio_copyright_claim: any;
+  ahmad_promo: unknown;
+  promo_data: unknown;
+  audio_copyright_claim: unknown;
   ads_disabled: boolean;
   is_safe_for_ads: boolean;
 }
@@ -184,8 +184,8 @@ export interface Community {
   small_image_url: string;
   med_image_url: string;
   i_subscribed: boolean;
-  community_notifications_enabled: any;
-  description: any;
+  community_notifications_enabled: unknown;
+  description: unknown;
 }
 
 export interface Music {
@@ -199,11 +199,9 @@ export interface Music {
 }
 
 export interface MediaBlocks {
-  uploaded_raw_videos: any[];
-  external_raw_videos: any[];
-  remixed_from_coubs: any[];
+  uploaded_raw_videos: unknown[];
+  external_raw_videos: unknown[];
+  remixed_from_coubs: unknown[];
 }
-
-export interface EditorialInfo {}
 
 export default CoubPost;

@@ -8,25 +8,26 @@ import SocksProxyAgent from 'socks-proxy-agent';
 import VideoAudioMerge from '../util/video-audio-merge.js';
 import { SafeParseURL, ParseQuery, ParsePath } from '../util/urls.js';
 import LogMessageOrError from '../util/log.js';
-import { LoadServiceConfig, LoadTokensConfig } from '../util/load-configs.js';
+import LoadConfig from '../util/load-configs.js';
 import UgoiraBuilder from '../util/ugoira-builder.js';
 import FormViewerURL from '../util/form-viewer-url.js';
 import HumanReadableSize from '../util/human-readable-size.js';
 import VideoCodecConvert from '../util/video-codec-convert.js';
+import { SocialPost } from '../types/social-post.js';
 
-const { PROXY_HOSTNAME, PROXY_PORT } = LoadServiceConfig();
+const { PROXY_HOSTNAME, PROXY_PORT } = LoadConfig('service');
 const {
   TWITTER_SCAPPER,
   INSTAGRAM_COOKIE_ONE_LINE_FOR_POSTS,
   INSTAGRAM_COOKIE_FILE_LOCATION_FOR_REELS,
   TUMBLR_OAUTH,
   JOYREACTOR_COOKIE,
-} = LoadTokensConfig();
+} = LoadConfig('tokens');
 
 const PROXY_AGENT =
   PROXY_HOSTNAME && PROXY_PORT
-    ? new SocksProxyAgent.SocksProxyAgent({ hostname: PROXY_HOSTNAME, port: PROXY_PORT })
-    : null;
+    ? new SocksProxyAgent.SocksProxyAgent(`socks5://${PROXY_HOSTNAME}:${PROXY_PORT}`)
+    : undefined;
 const DEFAULT_HEADERS = {
   accept:
     // eslint-disable-next-line max-len
@@ -56,7 +57,7 @@ const ytDlpClient = new YTDlpWrap.default();
  * @param {URL} url
  * @returns {Promise<import("../types/social-post").SocialPost>}
  */
-const Twitter = (url) => {
+const Twitter = (url: URL): Promise<SocialPost> => {
   const statusID = url.pathname.match(/^(?:\/[\w_]+)?\/status(?:es)?\/(\d+)/)?.[1];
   if (!statusID) return Promise.resolve({});
 
@@ -124,7 +125,7 @@ const Twitter = (url) => {
  * @param {URL} url
  * @returns {Promise<import("../types/social-post").SocialPost>}
  */
-const TwitterDirect = (url) => {
+const TwitterDirect = (url: URL): Promise<SocialPost> => {
   if (url.hostname === 'video.twimg.com') {
     url.search = '';
 
@@ -165,7 +166,7 @@ const TwitterDirect = (url) => {
  * @param {URL} url
  * @returns {Promise<import("../types/social-post").SocialPost>}
  */
-const Instagram = (url) => {
+const Instagram = (url: URL): Promise<SocialPost> => {
   const POST_PATHNAME_RX = /^\/p\/[\w-]+\/?$/i;
   const REEL_PATHNAME_RX = /^\/reel\/[\w-]+\/?$/i;
 
@@ -323,10 +324,14 @@ const Instagram = (url) => {
 
 /**
  * @param {URL} url
- * @param {number} [certainImageIndex] Unique parameter only for parser `PixivDirect`
+ * @param {number} [certainImageIndex]
  * @returns {Promise<import("../types/social-post").SocialPost>}
  */
-const Pixiv = (url, certainImageIndex) => {
+const Pixiv = (
+  url: URL,
+  /** Unique parameter only for parser `PixivDirect` */
+  certainImageIndex?: number
+): Promise<SocialPost> => {
   const PIXIV_PAGE_RX = /^\/(?:\w{2}\/)?artworks\/(?<illustId>\d+)/i;
   const PIXIV_HEADERS = {
     ...DEFAULT_HEADERS,
@@ -466,7 +471,7 @@ const Pixiv = (url, certainImageIndex) => {
  * @param {URL} url
  * @returns {Promise<import("../types/social-post").SocialPost>}
  */
-const PixivDirect = (url) => {
+const PixivDirect = (url: URL): Promise<SocialPost> => {
   const PIXIV_IMAGE_RX = /\/(?<illustId>\d+)_p(?<imageIndex>\d+)(?:_\w+)?\.\w+$/;
   const imageMatch = url.pathname.match(PIXIV_IMAGE_RX);
   if (!Object.keys(imageMatch?.groups || {}).length) {
@@ -488,7 +493,7 @@ const PixivDirect = (url) => {
  * @param {URL} url
  * @returns {Promise<import("../types/social-post").SocialPost>}
  */
-const Reddit = (url) => {
+const Reddit = (url: URL): Promise<SocialPost> => {
   if (!url.pathname) return Promise.resolve({});
 
   const REDDIT_POST_REGEXP = /^(?<givenPathname>(?:\/r\/[\w-._]+)?\/comments\/[\w-.]+)(?:\/)?/i;
@@ -696,7 +701,7 @@ const Reddit = (url) => {
  * @param {URL} url
  * @returns {Promise<import("../types/social-post").SocialPost>}
  */
-const Tumblr = (url) => {
+const Tumblr = (url: URL): Promise<SocialPost> => {
   const MAIN_DOMAIN_RX = /^\/(?<blogID>[^/]+)\/(?<postID>\d+)/i;
   const API_PATH_BASE = '/v2/blog/__BLOG_ID__/posts/__POST_ID__';
 
@@ -756,7 +761,7 @@ const Tumblr = (url) => {
  * @param {URL} url
  * @returns {Promise<import("../types/social-post").SocialPost>}
  */
-const Danbooru = (url) => {
+const Danbooru = (url: URL): Promise<SocialPost> => {
   if (!/^\/posts\/\d+/.test(url.pathname)) return Promise.resolve({});
 
   return fetch(url.href)
@@ -805,7 +810,7 @@ const Danbooru = (url) => {
  * @param {URL} url
  * @returns {Promise<import("../types/social-post").SocialPost>}
  */
-const Gelbooru = (url) =>
+const Gelbooru = (url: URL): Promise<SocialPost> =>
   fetch(url.href)
     .then((res) => {
       if (res.ok) return res.text();
@@ -845,7 +850,7 @@ const Gelbooru = (url) =>
  * @param {URL} url
  * @returns {Promise<import("../types/social-post").SocialPost>}
  */
-const Konachan = (url) =>
+const Konachan = (url: URL): Promise<SocialPost> =>
   fetch(url.href)
     .then((res) => {
       if (res.ok) return res.text();
@@ -886,7 +891,7 @@ const Konachan = (url) =>
  * @param {URL} url
  * @returns {Promise<import("../types/social-post").SocialPost>}
  */
-const Yandere = (url) =>
+const Yandere = (url: URL): Promise<SocialPost> =>
   fetch(url.href)
     .then((res) => {
       if (res.ok) return res.text();
@@ -924,7 +929,7 @@ const Yandere = (url) =>
  * @param {URL} url
  * @returns {Promise<import("../types/social-post").SocialPost>}
  */
-const Eshuushuu = (url) =>
+const Eshuushuu = (url: URL): Promise<SocialPost> =>
   fetch(url.href)
     .then((res) => {
       if (res.ok) return res.text();
@@ -962,7 +967,7 @@ const Eshuushuu = (url) =>
  * @param {URL} url
  * @returns {Promise<import("../types/social-post").SocialPost>}
  */
-const Sankaku = (url) =>
+const Sankaku = (url: URL): Promise<SocialPost> =>
   fetch(url.href)
     .then((res) => {
       if (res.ok) return res.text();
@@ -1000,7 +1005,7 @@ const Sankaku = (url) =>
  * @param {URL} url
  * @returns {Promise<import("../types/social-post").SocialPost>}
  */
-const Zerochan = (url) =>
+const Zerochan = (url: URL): Promise<SocialPost> =>
   fetch(url.href)
     .then((res) => {
       if (res.ok) return res.text();
@@ -1052,7 +1057,7 @@ const Zerochan = (url) =>
  * @param {URL} url
  * @returns {Promise<import("../types/social-post").SocialPost>}
  */
-const AnimePictures = (url) =>
+const AnimePictures = (url: URL): Promise<SocialPost> =>
   fetch(url.href)
     .then((res) => {
       if (res.ok) return res.text();
@@ -1089,7 +1094,7 @@ const AnimePictures = (url) =>
  * @param {URL} url
  * @returns {Promise<import("../types/social-post").SocialPost>}
  */
-const KemonoParty = (url) => {
+const KemonoParty = (url: URL): Promise<SocialPost> => {
   if (!url.pathname) return Promise.resolve({});
 
   const postURL = `https://kemono.party${url.pathname}`;
@@ -1150,7 +1155,7 @@ const KemonoParty = (url) => {
  * @param {URL} url
  * @returns {Promise<import("../types/social-post").SocialPost>}
  */
-const Youtube = (url) => {
+const Youtube = (url: URL): Promise<SocialPost> => {
   const queries = ParseQuery(url.search);
   const path = ParsePath(url.pathname);
 
@@ -1256,7 +1261,7 @@ const Youtube = (url) => {
  * @param {URL} url
  * @returns {Promise<import("../types/social-post").SocialPost>}
  */
-const Osnova = (url) => {
+const Osnova = (url: URL): Promise<SocialPost> => {
   const siteHostname = url.hostname.replace(/^.*\.(\w+\.\w+)$/, '$1').replace('the.tj', 'tjournal.ru');
 
   const isUser = /^\/u/i.test(url.pathname);
@@ -1363,7 +1368,7 @@ const Osnova = (url) => {
  * @param {URL} url
  * @returns {Promise<import("../types/social-post").SocialPost>}
  */
-const Joyreactor = (url) => {
+const Joyreactor = (url: URL): Promise<SocialPost> => {
   const JOYREACTOR_DIRECT_HOSTNAME_RX = /^img\d+\./;
   if (JOYREACTOR_DIRECT_HOSTNAME_RX.test(url.hostname))
     return Promise.resolve({
@@ -1512,7 +1517,7 @@ const Joyreactor = (url) => {
  * @param {URL} url
  * @returns {Promise<import("../types/social-post").SocialPost>}
  */
-const Coub = (url) => {
+const Coub = (url: URL): Promise<SocialPost> => {
   const COUB_VIDEO_RX = /^\/view\/(?<videoID>\w+)/;
   const videoID = url.pathname.match(COUB_VIDEO_RX)?.groups?.videoID;
   if (!videoID) return Promise.resolve({});
@@ -1599,7 +1604,7 @@ const Coub = (url) => {
  * @param {URL} url
  * @returns {Promise<import("../types/social-post").SocialPost>}
  */
-const Tiktok = (url) => {
+const Tiktok = (url: URL): Promise<SocialPost> => {
   const isShortened = url.hostname !== 'tiktok.com' && url.hostname !== 'www.tiktok.com';
   const pathParts = url.pathname.split('/').filter(Boolean);
 
@@ -1741,15 +1746,11 @@ const ALL_PARSERS = {
   Tiktok,
 };
 
-/** @typedef {keyof ALL_PARSERS} PlatformEnum */
-/**
- * @param {PlatformEnum} platform
- * @param {URL} url
- * @returns {Promise<import("../types/social-post").SocialPost>}
- */
-const SocialParser = (platform, url) => {
+export type PlatformEnum = keyof typeof ALL_PARSERS;
+
+const SocialParser = (platform: PlatformEnum, url: URL): Promise<SocialPost | null> => {
   const platformParser = ALL_PARSERS[platform];
-  if (!platformParser || !url) return Promise.resolve({});
+  if (!platformParser || !url) return Promise.resolve(null);
 
   return platformParser(url);
 };

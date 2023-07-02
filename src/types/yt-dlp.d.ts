@@ -12,17 +12,17 @@ export interface YtDlpOutput {
   channel_url: string;
   duration: number;
   view_count: number;
-  average_rating: any;
+  average_rating: unknown;
   age_limit: number;
   webpage_url: string;
   categories: string[];
   tags: string[];
   playable_in_embed: boolean;
-  live_status: any;
-  release_timestamp: any;
+  live_status: unknown;
+  release_timestamp: unknown;
   automatic_captions: Captions;
   subtitles: Captions;
-  comment_count: any;
+  comment_count: unknown;
   chapters: Chapter[];
   like_count: number;
   channel: string;
@@ -34,19 +34,19 @@ export interface YtDlpOutput {
   webpage_url_domain: string;
   extractor: string;
   extractor_key: string;
-  playlist: any;
-  playlist_index: any;
+  playlist: unknown;
+  playlist_index: unknown;
   display_id: string;
   fulltitle: string;
   duration_string: string;
-  requested_subtitles: any;
-  _has_drm: any;
+  requested_subtitles: unknown;
+  _has_drm: unknown;
   requested_formats: RequestedFormat[];
   format: string;
   format_id: string;
   ext: string;
   protocol: string;
-  language: any;
+  language: unknown;
   format_note: string;
   filesize_approx: number;
   tbr: number;
@@ -57,7 +57,7 @@ export interface YtDlpOutput {
   dynamic_range: string;
   vcodec: string;
   vbr: number;
-  stretched_ratio: any;
+  stretched_ratio: unknown;
   acodec: string;
   abr: number;
   asr: number;
@@ -162,7 +162,7 @@ export interface RequestedFormat {
   width?: number;
   language: string;
   language_preference: number;
-  preference: any;
+  preference: unknown;
   ext: string;
   vcodec: string;
   acodec: string;
@@ -181,7 +181,7 @@ export interface RequestedFormat {
 
 export interface Version {
   version: string;
-  current_git_head: any;
+  current_git_head: unknown;
   release_git_head: string;
   repository: string;
 }
