@@ -18,7 +18,7 @@ export default function Osnova(url: URL): Promise<SocialPost | undefined> {
 
   if (!postID) return Promise.resolve(undefined);
 
-  return fetch(`https://api.${siteHostname}/v1.9/entry/${postID}`)
+  return fetch(`https://api.${siteHostname}/v2.31/content?id=${postID}`)
     .then((res) => {
       if (res.ok)
         /** Osnova API post wrapped in `result` */
@@ -31,7 +31,7 @@ export default function Osnova(url: URL): Promise<SocialPost | undefined> {
     .then((osnovaPost) => {
       const socialPost: SocialPost = {
         author: osnovaPost.author.name,
-        authorURL: osnovaPost.author.url,
+        authorURL: `https://${siteHostname}/u/${osnovaPost.author.id}`,
         caption: osnovaPost.title || '',
         postURL: osnovaPost.url,
         medias: [],
