@@ -9,17 +9,39 @@ import VideoAudioMerge from '../../util/video-audio-merge.js';
 export default function Reddit(url: URL): Promise<SocialPost | undefined> {
   if (!url.pathname) return Promise.resolve(undefined);
 
-  const REDDIT_POST_REGEXP = /^(?<givenPathname>(?:\/r\/[\w-._]+)?\/comments\/[\w-.]+)(?:\/)?/i;
+  const REDDIT_POST_REGEXP =
+    /^(?<givenPathname>(?:\/r\/[\w-._]+)?\/(?<pathnameCommentsFormat>comments|s)\/[\w-.]+)(?:\/)?/i;
   const REDDIT_HEADERS = {
     ...DEFAULT_HEADERS,
     referer: 'https://www.reddit.com/',
   };
 
   const match = (url.hostname === 'redd.it' ? `/comments${url.pathname}` : url.pathname).match(REDDIT_POST_REGEXP);
-  const givenPathname = match?.groups?.givenPathname;
+  const { givenPathname, pathnameCommentsFormat } = match?.groups || {};
   if (!givenPathname) return Promise.resolve(undefined);
 
   const postURL = SafeParseURL(givenPathname, 'https://www.reddit.com').href;
+
+  if (pathnameCommentsFormat === 's') {
+    return fetch(postURL, { headers: REDDIT_HEADERS, redirect: 'manual' }).then((res) => {
+      const targetLocation = res.headers.get('location');
+      if (res.status >= 300 && res.status < 400 && targetLocation) {
+        const targetURL = SafeParseURL(targetLocation);
+        targetURL.search = '';
+
+        if (/\breddit\.com$/i.test(targetURL.hostname)) return Reddit(targetURL);
+      }
+
+      return Promise.reject(
+        new Error(
+          [
+            'Reddit new comments URL format: no redirect to actual post.',
+            `Status code ${res.status} ${res.statusText} (${res.url})`,
+          ].join(' ')
+        )
+      );
+    });
+  }
 
   return fetch(`${postURL}.json`, { headers: REDDIT_HEADERS })
     .then((res) => {
