@@ -6,7 +6,7 @@ import { SafeParseURL } from '../../util/urls.js';
 export default function KemonoParty(url: URL): Promise<SocialPost | undefined> {
   if (!url.pathname) return Promise.resolve(undefined);
 
-  const postURL = `https://kemono.party${url.pathname}`;
+  const postURL = `https://kemono.su${url.pathname}`;
 
   return fetch(postURL)
     .then((res) => {

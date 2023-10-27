@@ -50,7 +50,12 @@ const CheckForLink = (givenURL: string): { status: boolean; platform: PlatformEn
     return { status: true, platform: 'Zerochan', url };
   if (url.hostname === 'anime-pictures.net' || url.hostname === 'www.anime-pictures.net')
     return { status: true, platform: 'AnimePictures', url };
-  if (url.hostname === 'kemono.party' || url.hostname === 'www.kemono.party' || url.hostname === 'beta.kemono.party')
+  if (
+    url.hostname === 'kemono.party' ||
+    url.hostname === 'kemono.su' ||
+    url.hostname === 'www.kemono.party' ||
+    url.hostname === 'beta.kemono.party'
+  )
     return { status: true, platform: 'KemonoParty', url };
   if (
     url.hostname === 'youtube.com' ||
