@@ -1,7 +1,7 @@
 {
   "verbose": false,
   "execMap": {
-    "ts": "ts-node --esm --project tsconfig.json",
+    "ts": "node --loader ts-node/esm -r ts-node/register --no-warnings",
     "js": "node"
   },
   "ext": "ts,js,cjs,mjs,json",

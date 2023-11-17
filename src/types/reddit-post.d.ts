@@ -154,7 +154,7 @@ export interface ChildData {
         /** Check with this id `media_metadata` field */
         media_id: string;
         id: number;
-      }
+      },
     ];
   };
   media_metadata?: {

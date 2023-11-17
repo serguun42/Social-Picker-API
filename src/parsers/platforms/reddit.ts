@@ -202,19 +202,19 @@ export default function Reddit(url: URL): Promise<SocialPost | undefined> {
         medias: previewMedia.length
           ? previewMedia
           : /\.(jpe?g|png)$/i.test(imageURL)
-          ? [
-              {
-                type: isGif ? 'gif' : 'photo',
-                externalUrl: isImgur
-                  ? FormViewerURL(
-                      (post.preview?.images?.[0]?.source?.url || '').replace(/&amp;/g, '&') || imageURL,
-                      'https://www.reddit.com',
-                      true
-                    )
-                  : imageURL,
-              },
-            ]
-          : [],
+            ? [
+                {
+                  type: isGif ? 'gif' : 'photo',
+                  externalUrl: isImgur
+                    ? FormViewerURL(
+                        (post.preview?.images?.[0]?.source?.url || '').replace(/&amp;/g, '&') || imageURL,
+                        'https://www.reddit.com',
+                        true
+                      )
+                    : imageURL,
+                },
+              ]
+            : [],
       });
     });
 }

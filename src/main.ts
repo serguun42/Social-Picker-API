@@ -63,10 +63,13 @@ createServer((req, res) => {
         VideoHooksStorage[filename] = fileCallback;
 
         /** Deleting video in 5 minutes in any case */
-        setTimeout(() => {
-          fileCallback();
-          delete VideoHooksStorage[filename];
-        }, 1000 * 60 * 5);
+        setTimeout(
+          () => {
+            fileCallback();
+            delete VideoHooksStorage[filename];
+          },
+          1000 * 60 * 5
+        );
       });
 
       return SendPayload(res, 200, socialPost);
@@ -77,4 +80,4 @@ createServer((req, res) => {
     });
 }).listen(PORT);
 
-if (DEV) process.stdout.write(`\x1BcStarted dev instance on http://localhost:${PORT}/?url=DEFAULT\n`);
+if (DEV) process.stdout.write(`\x1BcStarted dev instance on http://localhost:${PORT}/?url=REPLACE\n`);
