@@ -40,9 +40,9 @@ If you're planning opening your Picker instance to the world, I'd suggest creati
 - _Instagram_ – images, videos, galleries and Reels. [_More details_](#instagram)
 - _Osnova_ – images, videos, GIFs and galleries. [_More details_](#osnova)
 - _Coub_ – looped videos with linear audio. [_More details_](#coub)
-- _Joyreactor_ – images and GIFs from multiple subdomains and direct links to media files
+- _Joyreactor_ – images and GIFs from multiple subdomains and direct links to media files. [_More details_](#joyreactor)
 - _Tumblr_ – images and galleries. [_More details_](#tumblr)
-- _KemonoParty_ – images
+- _Kemono_ – images and galleries. [_More details_](#kemono)
 - _Danbooru_ – images (unstable)
 - _Gelbooru_ – images (unstable)
 - _Konachan_ – images (unstable)
@@ -85,7 +85,9 @@ Uses external service for end-user viewing of high-res images due to Referer Hea
 
 #### Reddit
 
-Supports images, videos, GIFs and galleries. Because Reddit's videos are divided from audios, this app utilizes [`video-audio-merge`](./src/util/video-audio-merge.ts) for merging separated streams (via `ffmpeg`).
+Supports images, videos, GIFs and galleries. Because Reddit's videos are divided from audios, this app utilizes [`video-audio-merge`](./src/util/video-audio-merge.ts) for merging separated streams via `ffmpeg`.
+
+Requires setup of the site's cookies in [`tokens.json`](./config/tokens.json)
 
 #### Tiktok
 
@@ -117,9 +119,17 @@ Supports images, videos, GIFs and galleries. Also extracts Twitter and Instagram
 
 Creates looped videos with linear audio, limits itself only with audio length and filesize if it ever exceed a reasonable size (20 MB). Uses [`video-audio-merge`](./src/util/video-audio-merge.ts) for merging separated streams (via `ffmpeg`).
 
+#### Joyreactor
+
+Supports images, videos, GIFs and galleries, requires setup of the site's cookies in [`tokens.json`](./config/tokens.json).
+
 #### Tumblr
 
 Supports images and galleries, set OAuth keys and stuff in [`tokens.json`](./config/tokens.json).
+
+#### Kemono
+
+Supports images and galleries, requires setup of the site's cookies in [`tokens.json`](./config/tokens.json).
 
 ---
 

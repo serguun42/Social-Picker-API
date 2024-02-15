@@ -1,14 +1,30 @@
-import { parse as parseHTML } from 'node-html-parser';
 import fetch from 'node-fetch';
+import { parse as parseHTML } from 'node-html-parser';
+import { SocksProxyAgent } from 'socks-proxy-agent';
 import { Media, SocialPost } from '../../types/social-post.js';
+import LoadConfig from '../../util/load-configs.js';
 import { SafeParseURL } from '../../util/urls.js';
+import DEFAULT_HEADERS from '../default-headers.js';
 
-export default function KemonoParty(url: URL): Promise<SocialPost | undefined> {
+const { PROXY_HOSTNAME, PROXY_PORT } = LoadConfig('service');
+const PROXY_AGENT =
+  PROXY_HOSTNAME && PROXY_PORT ? new SocksProxyAgent(`socks5://${PROXY_HOSTNAME}:${PROXY_PORT}`) : undefined;
+
+const { KEMONO_COOKIE } = LoadConfig('tokens');
+
+export default function Kemono(url: URL): Promise<SocialPost | undefined> {
   if (!url.pathname) return Promise.resolve(undefined);
 
-  const postURL = `https://kemono.su${url.pathname}`;
+  const postURL = new URL(url.pathname, 'https://kemono.su/').href;
 
-  return fetch(postURL)
+  return fetch(postURL, {
+    headers: {
+      ...DEFAULT_HEADERS,
+      referer: 'https://kemono.su/',
+      cookie: KEMONO_COOKIE,
+    },
+    agent: PROXY_AGENT,
+  })
     .then((res) => {
       if (res.ok) return res.text();
       return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
@@ -24,17 +40,17 @@ export default function KemonoParty(url: URL): Promise<SocialPost | undefined> {
 
       try {
         const parsedHTML = parseHTML(kemonoPartyPage);
-        const filesAnchors = parsedHTML.querySelectorAll('.post__thumbnail > .fileThumb');
+        const filesAnchors = parsedHTML.querySelectorAll('.post__thumbnail .fileThumb');
 
         if (!(filesAnchors instanceof Array)) throw new Error('No array with files');
 
-        filesAnchors.slice(1).forEach((fileAnchor) => {
+        filesAnchors.forEach((fileAnchor) => {
           const media: Media = {
             type: 'photo',
           };
 
-          const fullsizeURL = fileAnchor.getAttribute('href');
-          if (fullsizeURL) media.original = SafeParseURL(fullsizeURL, url.origin).href;
+          const fullSizeURL = fileAnchor.getAttribute('href');
+          if (fullSizeURL) media.original = SafeParseURL(fullSizeURL, url.origin).href;
 
           const thumbnailImage = fileAnchor.querySelector('img');
           if (thumbnailImage) media.externalUrl = SafeParseURL(thumbnailImage.getAttribute('src'), url.origin).href;

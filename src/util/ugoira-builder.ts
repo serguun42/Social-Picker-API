@@ -78,8 +78,9 @@ export default function UgoiraBuilder(ugoiraMeta: UgoiraMeta, sourceZip: ArrayBu
                 else
                   ffmpegReject(
                     new Error(
-                      `ffmpeg exited with code ${code}${signal ? `/signal ${signal}` : ''} (${ugoiraMeta?.body
-                        ?.originalSrc})`
+                      `ffmpeg exited with code ${code}${signal ? `/signal ${signal}` : ''} (${
+                        ugoiraMeta?.body?.originalSrc
+                      })`
                     )
                   );
               });

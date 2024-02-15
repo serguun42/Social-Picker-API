@@ -11,7 +11,7 @@ import Osnova from './platforms/osnova.js';
 import Coub from './platforms/coub.js';
 import Joyreactor from './platforms/joyreactor.js';
 import Tumblr from './platforms/tumblr.js';
-import KemonoParty from './platforms/kemono-party.js';
+import Kemono from './platforms/kemono.js';
 import {
   Danbooru,
   Gelbooru,
@@ -36,7 +36,7 @@ const ALL_PARSERS = {
   Coub,
   Joyreactor,
   Tumblr,
-  KemonoParty,
+  Kemono,
   Danbooru,
   Gelbooru,
   Konachan,

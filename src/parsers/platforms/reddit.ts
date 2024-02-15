@@ -1,10 +1,18 @@
 import fetch from 'node-fetch';
-import { Media, SocialPost } from '../../types/social-post.js';
-import { SafeParseURL } from '../../util/urls.js';
-import DEFAULT_HEADERS from '../default-headers.js';
+import { SocksProxyAgent } from 'socks-proxy-agent';
 import RedditPost from '../../types/reddit-post.js';
+import { Media, SocialPost } from '../../types/social-post.js';
 import FormViewerURL from '../../util/form-viewer-url.js';
+import LoadConfig from '../../util/load-configs.js';
+import { SafeParseURL } from '../../util/urls.js';
 import VideoAudioMerge from '../../util/video-audio-merge.js';
+import DEFAULT_HEADERS from '../default-headers.js';
+
+const { PROXY_HOSTNAME, PROXY_PORT } = LoadConfig('service');
+const PROXY_AGENT =
+  PROXY_HOSTNAME && PROXY_PORT ? new SocksProxyAgent(`socks5://${PROXY_HOSTNAME}:${PROXY_PORT}`) : undefined;
+
+const { REDDIT_COOKIE } = LoadConfig('tokens');
 
 export default function Reddit(url: URL): Promise<SocialPost | undefined> {
   if (!url.pathname) return Promise.resolve(undefined);
@@ -43,7 +51,7 @@ export default function Reddit(url: URL): Promise<SocialPost | undefined> {
     });
   }
 
-  return fetch(`${postURL}.json`, { headers: REDDIT_HEADERS })
+  return fetch(`${postURL}.json`, { headers: { ...REDDIT_HEADERS, cookie: REDDIT_COOKIE }, agent: PROXY_AGENT })
     .then((res) => {
       if (res.ok) return res.json() as Promise<RedditPost>;
       return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));

@@ -24,6 +24,8 @@ export type TokensConfig = {
     token: string;
     token_secret: string;
   };
+  KEMONO_COOKIE: string;
+  REDDIT_COOKIE: string;
   JOYREACTOR_COOKIE: string;
 };
 
