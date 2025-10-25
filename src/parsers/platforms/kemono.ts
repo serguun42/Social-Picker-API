@@ -1,16 +1,13 @@
 import fetch from 'node-fetch';
 import { parse as parseHTML } from 'node-html-parser';
-import { SocksProxyAgent } from 'socks-proxy-agent';
+
 import { Media, SocialPost } from '../../types/social-post.js';
-import LoadConfig from '../../util/load-configs.js';
-import { SafeParseURL } from '../../util/urls.js';
+import { SafeParseURL } from '../../util/links/urls.js';
+import loadConfig from '../../util/load-configs.js';
+import PROXY_AGENT from '../../util/proxy.js';
 import DEFAULT_HEADERS from '../default-headers.js';
 
-const { PROXY_HOSTNAME, PROXY_PORT } = LoadConfig('service');
-const PROXY_AGENT =
-  PROXY_HOSTNAME && PROXY_PORT ? new SocksProxyAgent(`socks5://${PROXY_HOSTNAME}:${PROXY_PORT}`) : undefined;
-
-const { KEMONO_COOKIE } = LoadConfig('tokens');
+const { KEMONO_COOKIE } = loadConfig('tokens');
 
 export default function Kemono(url: URL): Promise<SocialPost | undefined> {
   if (!url.pathname) return Promise.resolve(undefined);
@@ -21,7 +18,7 @@ export default function Kemono(url: URL): Promise<SocialPost | undefined> {
     headers: {
       ...DEFAULT_HEADERS,
       referer: 'https://kemono.su/',
-      cookie: KEMONO_COOKIE,
+      ...(KEMONO_COOKIE ? { cookie: KEMONO_COOKIE } : {}),
     },
     agent: PROXY_AGENT,
   })

@@ -1,9 +1,10 @@
 import YTDlpWrap from 'yt-dlp-wrap';
+
 import { SocialPost } from '../../types/social-post.js';
-import LogMessageOrError from '../../util/log.js';
-import { ParsePath, ParseQuery } from '../../util/urls.js';
-import YtDlpOutput from '../../types/yt-dlp.js';
+import { YtDlpOutput } from '../../types/yt-dlp.js';
 import HumanReadableSize from '../../util/human-readable-size.js';
+import { ParsePath, ParseQuery } from '../../util/links/urls.js';
+import LogMessageOrError from '../../util/log.js';
 
 // eslint-disable-next-line new-cap
 const ytDlpClient = new YTDlpWrap.default();

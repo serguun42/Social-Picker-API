@@ -1,10 +1,11 @@
-export interface Sizes {
-  [sizeName: string]: {
+export type Sizes = Record<
+  string,
+  {
     w: number;
     h: number;
     resize: 'fit' | 'crop';
-  };
-}
+  }
+>;
 
 export interface Media {
   id: number;

@@ -1,16 +1,16 @@
-export type PixivPreload = {
+export interface PixivPreload {
   timestamp: string;
-  illust: { [illustId: string]: PostAkaIllust };
-  user: { [userId: string]: User };
-};
+  illust: Record<string, PostAkaIllust>;
+  user: Record<string, User>;
+}
 
-export type PixivAjax = {
+export interface PixivAjax {
   error: boolean;
   message: string;
   body: PostAkaIllust;
-};
+}
 
-export type PostAkaIllust = {
+export interface PostAkaIllust {
   illustId: string;
   illustTitle: string;
   illustComment: string;
@@ -30,7 +30,7 @@ export type PostAkaIllust = {
   userId: string;
   userName: string;
   userAccount: string;
-  userIllusts: { [illustId: string]: UserIllust | null };
+  userIllusts: Record<string, UserIllust | null>;
   likeData: boolean;
   width: number;
   height: number;
@@ -62,24 +62,24 @@ export type PostAkaIllust = {
   isUnlisted: boolean;
   request: unknown;
   commentOff: number;
-};
+}
 
-export type Urls = {
+export interface Urls {
   mini: string;
   thumb: string;
   small: string;
   regular: string;
   original: string;
-};
+}
 
-type Tags = {
+interface Tags {
   authorId: string;
   isLocked: boolean;
   tags: Tag[];
   writable: boolean;
-};
+}
 
-type Tag = {
+interface Tag {
   tag: string;
   locked: boolean;
   deletable: boolean;
@@ -87,9 +87,9 @@ type Tag = {
   romaji: string;
   translation: { en: string };
   userName: string;
-};
+}
 
-type UserIllust = {
+interface UserIllust {
   id: string;
   title: string;
   illustType: number;
@@ -112,18 +112,16 @@ type UserIllust = {
   updateDate: string;
   isUnlisted: boolean;
   isMasked: boolean;
-};
+}
 
-type TitleCaptionTranslation = {
+interface TitleCaptionTranslation {
   workTitle: unknown;
   workCaption: unknown;
-};
+}
 
-type ZoneConfig = {
-  [zoneConfigType: string]: { url: string };
-};
+type ZoneConfig = Record<string, { url: string }>;
 
-type Meta = {
+interface Meta {
   title: string;
   description: string;
   canonical: string;
@@ -131,33 +129,33 @@ type Meta = {
   descriptionHeader: string;
   ogp: Ogp;
   twitter: Twitter;
-};
+}
 
-type AlternateLanguages = {
+interface AlternateLanguages {
   ja: string;
   en: string;
-};
+}
 
-type Ogp = {
+interface Ogp {
   description: string;
   image: string;
   title: string;
   type: string;
-};
+}
 
-type Twitter = {
+interface Twitter {
   description: string;
   image: string;
   title: string;
   card: string;
-};
+}
 
-type TitleCaptionTranslation3 = {
+interface TitleCaptionTranslation3 {
   workTitle: unknown;
   workCaption: unknown;
-};
+}
 
-type User = {
+interface User {
   userId: string;
   name: string;
   image: string;
@@ -171,9 +169,9 @@ type User = {
   partial: number;
   acceptRequest: boolean;
   sketchLives: unknown[];
-};
+}
 
-export type UgoiraMeta = {
+export interface UgoiraMeta {
   error: boolean;
   message: string;
   body: {
@@ -185,4 +183,4 @@ export type UgoiraMeta = {
       delay: number;
     }[];
   };
-};
+}

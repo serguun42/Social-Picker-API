@@ -1,5 +1,5 @@
 import { PlatformEnum } from '../parsers/generic.js';
-import { SafeParseURL } from './urls.js';
+import { SafeParseURL } from '../util/links/urls.js';
 
 const CheckForLink = (givenURL: string): { status: boolean; platform: PlatformEnum | null; url: URL } => {
   const url = SafeParseURL(givenURL);
@@ -51,11 +51,10 @@ const CheckForLink = (givenURL: string): { status: boolean; platform: PlatformEn
   if (url.hostname === 'anime-pictures.net' || url.hostname === 'www.anime-pictures.net')
     return { status: true, platform: 'AnimePictures', url };
   if (
-    url.hostname === 'kemono.party' ||
     url.hostname === 'kemono.su' ||
     url.hostname === 'www.kemono.su' ||
-    url.hostname === 'www.kemono.party' ||
-    url.hostname === 'beta.kemono.party'
+    url.hostname === 'kemono.cr' ||
+    url.hostname === 'www.kemono.cr'
   )
     return { status: true, platform: 'Kemono', url };
   if (

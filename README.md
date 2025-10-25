@@ -58,24 +58,25 @@ If you're planning opening your Picker instance to the world, I'd suggest creati
 
 Some platform modules utilizes binary executable, here is the list:
 
-- `Social Picker Twitter Scrapper` – read more about [_Twitter specific_](#twitter)
 - `ffmpeg` – for media stream merging and convering. Follow instructions on [the official site](https://ffmpeg.org/download.html). After installing make sure you added its location to [`$PATH`](<https://en.wikipedia.org/wiki/PATH_(variable)>)
+- `gallery-dl` – [_Twitter specific_](#twitter). Download or install [release](https://github.com/mikf/gallery-dl) for your platform, make it executable and ensure its location is in the [`$PATH`](<https://en.wikipedia.org/wiki/PATH_(variable)>)
 - `yt-dlp` – for picking some video-platforms. Download [built release](https://github.com/yt-dlp/yt-dlp/releases) for your platform, make it executable and ensure its location is in the [`$PATH`](<https://en.wikipedia.org/wiki/PATH_(variable)>)
 
 #### Proxies
 
 Some platforms have very harsh limitation of allowed IP addresses/[AS](<https://en.wikipedia.org/wiki/Autonomous_system_(Internet)>). Therefore [`service.json`](./config/service.json) contains two fields for setting up host and port of SOCKS5 proxy to some remote server (`PROXY_HOSTNAME` and `PROXY_PORT`); you can set them to `null` if accessing such platforms from your IP address is not being limited. For the same reason base URL of external service hash template for proxy flag in its search query (see [Open access](#open-access)).
 
-#### Twitter
+#### Twitter/X
 
-Supports images, videos, GIFs (temporary unstable) and direct media from `*.twimg.com`.
+Supports images, videos, GIFs (temporary unstable) and direct media from `*.twimg.com`. Uses [`gallery-dl`](https://github.com/mikf/gallery-dl) for downloading media from Twitter/X.com.
 
-This project uses [Social Picker Twitter Scrapper](https://github.com/serguun42/Social-Picker-Twitter-Scrapper) – wrapper [for this Go lib](https://github.com/n0madic/twitter-scraper) – to fetch tweets without API. Thus if you want to get Tweets, before running this app you should consider reading that project README and placing its compiled/created executable and config-files into these folders:
+To use this platform:
 
-1. Move executable file `Social-Picker-Twitter-Scrapper` into [`bin`](./bin/) folder
-2. Move generated `cookies.json` into [`config`](./config/), choose a explicit name for it, e.g. `twitter-scrapper-cookies.json`
-   - For convenience you can move `credentials.json` next to `cookies.json` (this app and executable binary use only cookies file).
-3. Check and edit [`tokens.json`](./config/tokens.json) – give a look to properties `TWITTER_SCAPPER.binary_file_path` and `TWITTER_SCAPPER.cookies_file_path`: paths are relative to project's root, default ones are in accordance to this example.
+1. Install [this browser extension](https://github.com/kairi003/Get-cookies.txt-LOCALLY) – it's open source and it supports Chrome and Firefox
+2. Go to [x.com](https://x.com)
+3. Copy cookies (click `Copy` button in extension popup)
+4. Create file `config/twitter.cookies.txt` and paste there contents from clipboard (it starts with `"# Netscape HTTP Cookie File"`)
+5. Check and edit [`tokens.json`](./config/tokens.json) – give a look to property `TWITTER_COOKIE_FILE_LOCATION`: set path relative to project's root, default one is in accordance to this example (_or simply don't change default value_).
 
 #### Pixiv
 
@@ -85,7 +86,7 @@ Uses external service for end-user viewing of high-res images due to Referer Hea
 
 #### Reddit
 
-Supports images, videos, GIFs and galleries. Because Reddit's videos are divided from audios, this app utilizes [`video-audio-merge`](./src/util/video-audio-merge.ts) for merging separated streams via `ffmpeg`.
+Supports images, videos, GIFs and galleries. Because Reddit's videos are divided from audios, this app utilizes [`video-audio-merge`](./src/util/media/video-audio-merge.ts) for merging separated streams via `ffmpeg`.
 
 Requires setup of the site's cookies in [`tokens.json`](./config/tokens.json)
 
@@ -99,17 +100,13 @@ Uses `yt-dlp` for extracting metadata and then [`video-codec-convert`](./src/uti
 
 Supports images, videos, galleries and Reels.
 
-_To pick default regular post_ (square photos, videos and galleries) set property `INSTAGRAM_COOKIE_ONE_LINE_FOR_POSTS` in [`tokens.json`](./config/tokens.json). Place there contents of cookies from your web-browser's DevTools (Press `F12` —> `Console` tab —> type `document.cookie` —> press `Enter`).
-
-> _Question_: Are those cookies enough?<br> _Answer_: Works well for me! If they're not sufficient anymore, copy from DevTools tabs `Network` or `Application`
-
-_To pick Reels_:
+_To pick posts and Reels_:
 
 1. Install [this browser extension](https://github.com/kairi003/Get-cookies.txt-LOCALLY) – it's open source and it supports Chrome and Firefox
 2. Go to [instagram.com](https://instagram.com)
 3. Copy cookies (click `Copy` button in extension popup)
 4. Create file `config/instagram.cookies.txt` and paste there contents from clipboard (it starts with `"# Netscape HTTP Cookie File"`)
-5. Check and edit [`tokens.json`](./config/tokens.json) – give a look to property `INSTAGRAM_COOKIE_FILE_LOCATION_FOR_REELS`: set path relative to project's root, default one is in accordance to this example.
+5. Check and edit [`tokens.json`](./config/tokens.json) – give a look to property `INSTAGRAM_COOKIE_FILE_LOCATION`: set path relative to project's root, default one is in accordance to this example (_or simply don't change default value_).
 
 #### Osnova
 
@@ -117,7 +114,7 @@ Supports images, videos, GIFs and galleries. Also extracts Twitter and Instagram
 
 #### Coub
 
-Creates looped videos with linear audio, limits itself only with audio length and filesize if it ever exceed a reasonable size (20 MB). Uses [`video-audio-merge`](./src/util/video-audio-merge.ts) for merging separated streams (via `ffmpeg`).
+Creates looped videos with linear audio, limits itself only with audio length and filesize if it ever exceed a reasonable size (20 MB). Uses [`video-audio-merge`](./src/util/media/video-audio-merge.ts) for merging separated streams (via `ffmpeg`).
 
 #### Joyreactor
 
@@ -135,7 +132,6 @@ Supports images and galleries, requires setup of the site's cookies in [`tokens.
 
 ### Read more
 
-- [Social Picker Twitter Scrapper](https://github.com/serguun42/Social-Picker-Twitter-Scrapper) – wrapper [for `twitter-scraper` lib](https://github.com/n0madic/twitter-scraper) in Go
 - [Telegram bot based on this service](https://github.com/serguun42/Anime-Ultra-Bot)
 - [Frontend client built for this service](https://github.com/serguun42/Social-Picker-Vue)
 - [ffmpeg docs](https://ffmpeg.org/ffmpeg.html)

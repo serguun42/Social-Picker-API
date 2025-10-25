@@ -132,13 +132,14 @@ export interface Thumbnail {
   resolution?: string;
 }
 
-export interface Captions {
-  [language: string]: {
+export type Captions = Record<
+  string,
+  {
     ext: string;
     url: string;
     name: string;
-  }[];
-}
+  }[]
+>;
 
 export interface Chapter {
   start_time: number;

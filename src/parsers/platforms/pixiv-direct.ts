@@ -1,7 +1,7 @@
-import { SocialPost } from '../../types/social-post.js';
-import LogMessageOrError from '../../util/log.js';
-import { SafeParseURL } from '../../util/urls.js';
 import Pixiv from './pixiv.js';
+import { SocialPost } from '../../types/social-post.js';
+import { SafeParseURL } from '../../util/links/urls.js';
+import LogMessageOrError from '../../util/log.js';
 
 export default function PixivDirect(url: URL): Promise<SocialPost | undefined> {
   const PIXIV_IMAGE_RX = /\/(?<illustId>\d+)_p(?<imageIndex>\d+)(?:_\w+)?\.\w+$/;

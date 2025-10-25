@@ -1,17 +1,19 @@
-import { createServer, STATUS_CODES, IncomingMessage, ServerResponse } from 'node:http';
+import { createServer, ServerResponse, STATUS_CODES } from 'node:http';
+
 import mime from 'mime-types';
+
+import CheckForLink from './lib/check-for-link.js';
 import GenericSocialParser from './parsers/generic.js';
-import CheckForLink from './util/check-for-link.js';
-import LoadConfig from './util/load-configs.js';
+import IS_DEV from './util/is-dev.js';
+import { ParseQuery, SafeParseURL } from './util/links/urls.js';
+import loadConfig from './util/load-configs.js';
 import LogMessageOrError from './util/log.js';
-import { SafeParseURL, ParseQuery } from './util/urls.js';
-import DEV from './util/is-dev.js';
 
-const { PORT } = LoadConfig('service');
+const { PORT } = loadConfig('service');
 
-const VideoHooksStorage: { [filename: string]: () => void } = {};
+const VideoHooksStorage: Record<string, () => void> = {};
 
-const SendPayload = (res: ServerResponse<IncomingMessage>, code: number, data: string | Buffer | object) => {
+const SendPayload = (res: ServerResponse, code: number, data: string | Buffer | object) => {
   res.statusCode = code;
 
   if (data instanceof Buffer || typeof data === 'string') {
@@ -24,7 +26,7 @@ const SendPayload = (res: ServerResponse<IncomingMessage>, code: number, data: s
   }
 };
 
-const SendCode = (res: ServerResponse<IncomingMessage>, code: number) => {
+const SendCode = (res: ServerResponse, code: number) => {
   res.statusCode = code || 500;
   res.end(`${code || 500} ${STATUS_CODES[code || 500]}`);
 };
@@ -80,4 +82,4 @@ createServer((req, res) => {
     });
 }).listen(PORT);
 
-if (DEV) process.stdout.write(`\x1BcStarted dev instance on http://localhost:${PORT}/?url=REPLACE\n`);
+if (IS_DEV) process.stdout.write(`\x1BcStarted dev instance on http://localhost:${PORT}/?url=REPLACE\n`);

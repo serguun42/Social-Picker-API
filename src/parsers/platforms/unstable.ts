@@ -1,7 +1,8 @@
-import { parse as parseHTML } from 'node-html-parser';
 import fetch from 'node-fetch';
+import { parse as parseHTML } from 'node-html-parser';
+
 import { SocialPost } from '../../types/social-post.js';
-import { SafeParseURL } from '../../util/urls.js';
+import { SafeParseURL } from '../../util/links/urls.js';
 
 export function Danbooru(url: URL): Promise<SocialPost | undefined> {
   if (!/^\/posts\/\d+/.test(url.pathname)) return Promise.resolve(undefined);
@@ -20,31 +21,27 @@ export function Danbooru(url: URL): Promise<SocialPost | undefined> {
         medias: [],
       };
 
-      try {
-        const parsedHTML = parseHTML(danbooruPage);
+      const parsedHTML = parseHTML(danbooruPage);
 
-        const sizeAnchor = parsedHTML.querySelector('#post-info-size > a');
-        if (!sizeAnchor) return Promise.reject(new Error('Danbooru no <sizeAnchor>'));
+      const sizeAnchor = parsedHTML.querySelector('#post-info-size > a');
+      if (!sizeAnchor) return Promise.reject(new Error('Danbooru no <sizeAnchor>'));
 
-        const pictureURL = sizeAnchor.getAttribute('href');
+      const pictureURL = sizeAnchor.getAttribute('href');
 
-        socialPost.medias = [
-          {
-            type: 'photo',
-            externalUrl: pictureURL,
-          },
-        ];
+      socialPost.medias = [
+        {
+          type: 'photo',
+          externalUrl: pictureURL,
+        },
+      ];
 
-        const uploaderAnchor = parsedHTML.querySelector('#post-info-uploader > a');
-        if (uploaderAnchor) {
-          socialPost.author = uploaderAnchor.getAttribute('data-user-name') || '';
-          socialPost.authorURL = SafeParseURL(uploaderAnchor.getAttribute('href') || '', url.origin).href;
-        }
-
-        return Promise.resolve(socialPost);
-      } catch (e) {
-        return Promise.reject(e);
+      const uploaderAnchor = parsedHTML.querySelector('#post-info-uploader > a');
+      if (uploaderAnchor) {
+        socialPost.author = uploaderAnchor.getAttribute('data-user-name') || '';
+        socialPost.authorURL = SafeParseURL(uploaderAnchor.getAttribute('href') || '', url.origin).href;
       }
+
+      return Promise.resolve(socialPost);
     });
 }
 
@@ -55,33 +52,29 @@ export function Gelbooru(url: URL): Promise<SocialPost | undefined> {
       return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
     })
     .then((gelbooruPage) => {
-      try {
-        const parsedHTML = parseHTML(gelbooruPage);
+      const parsedHTML = parseHTML(gelbooruPage);
 
-        const tagList = parsedHTML.querySelector('.tag-list');
-        if (!tagList) throw new Error('No <tagList> in <gelbooruPage>');
+      const tagList = parsedHTML.querySelector('.tag-list');
+      if (!tagList) throw new Error('No <tagList> in <gelbooruPage>');
 
-        const originalLink = tagList.querySelector(`a[href$=".jpeg"], a[href$=".jpg"], a[href$=".png"]`);
-        if (!originalLink) throw new Error('No <originalLink> in <tagList>');
+      const originalLink = tagList.querySelector(`a[href$=".jpeg"], a[href$=".jpg"], a[href$=".png"]`);
+      if (!originalLink) throw new Error('No <originalLink> in <tagList>');
 
-        const source = originalLink.getAttribute('href');
-        if (!source) throw new Error('No <source> in <originalLink>');
+      const source = originalLink.getAttribute('href');
+      if (!source) throw new Error('No <source> in <originalLink>');
 
-        return Promise.resolve({
-          author: '',
-          authorURL: '',
-          postURL: url.href,
-          caption: '',
-          medias: [
-            {
-              type: 'photo',
-              externalUrl: source,
-            },
-          ],
-        });
-      } catch (e) {
-        return Promise.reject(e);
-      }
+      return Promise.resolve({
+        author: '',
+        authorURL: '',
+        postURL: url.href,
+        caption: '',
+        medias: [
+          {
+            type: 'photo',
+            externalUrl: source,
+          },
+        ],
+      });
     });
 }
 
@@ -96,11 +89,12 @@ export function Konachan(url: URL): Promise<SocialPost | undefined> {
 
       try {
         source =
-          konachanPage.split('<body')[1].match(
-            // eslint-disable-next-line max-len
-            /<a(\s+[\w-]+="([^"]+)")*\s+href="([^"]+)"(\s+[\w-]+="([^"]+)")*\s+id="highres"(\s+[\w-]+="([^"]+)")*/i
-          )?.[3] || '';
-      } catch (e) {
+          konachanPage
+            .split('<body')[1]
+            .match(
+              /<a(\s+[\w-]+="([^"]+)")*\s+href="([^"]+)"(\s+[\w-]+="([^"]+)")*\s+id="highres"(\s+[\w-]+="([^"]+)")*/i
+            )?.[3] || '';
+      } catch {
         return Promise.reject(new Error(`Error on parsing Konachan (${url.href})`));
       }
 
@@ -132,7 +126,7 @@ export function Yandere(url: URL): Promise<SocialPost | undefined> {
 
       try {
         source = yanderePage.split('<body')[1].match(/<a\s+class="[^"]+"\s+id="highres"\s+href="([^"]+)"/i)?.[1] || '';
-      } catch (e) {
+      } catch {
         return Promise.reject(new Error(`Error on parsing Yandere (${url.href})`));
       }
 
@@ -166,7 +160,7 @@ export function Eshuushuu(url: URL): Promise<SocialPost | undefined> {
         const match = eshuushuuPage.split('<body')[1].match(/<a\s+class="thumb_image"\s+href="([^"]+)"/i);
 
         if (match?.[1]) source = `https://e-shuushuu.net/${match[1].replace(/\/\//g, '/').replace(/^\//g, '')}`;
-      } catch (e) {
+      } catch {
         return Promise.reject(new Error(`Error on parsing Eshuushuu (${url.href})`));
       }
 
@@ -199,7 +193,7 @@ export function Sankaku(url: URL): Promise<SocialPost | undefined> {
       try {
         const match = sankakuPage.split('<body')[1].match(/<a\s+href="([^"]+)"\s+id=(")?highres/i);
         if (match?.[1]) source = match[1].replace(/&amp;/g, '&');
-      } catch (e) {
+      } catch {
         return Promise.reject(new Error(`Error on parsing Sankaku (${url.href})`));
       }
 
@@ -240,7 +234,7 @@ export function Zerochan(url: URL): Promise<SocialPost | undefined> {
               .split('</head')[0]
               .match(/<meta\s+(name|property)="twitter:image"\s+content="([^"]+)"/i)?.[2] || '';
         }
-      } catch (e) {
+      } catch {
         return Promise.reject(new Error(`Error on parsing Zerochan (${url.href})`));
       }
 
@@ -273,29 +267,25 @@ export function AnimePictures(url: URL): Promise<SocialPost | undefined> {
       return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
     })
     .then((animePicturesPage) => {
-      try {
-        const parsedHTML = parseHTML(animePicturesPage);
+      const parsedHTML = parseHTML(animePicturesPage);
 
-        const link = parsedHTML.getElementById('get_image_link');
-        if (!link) throw new Error('No <link> in <parsedHTML>');
+      const link = parsedHTML.getElementById('get_image_link');
+      if (!link) throw new Error('No <link> in <parsedHTML>');
 
-        const source = link.getAttribute('href');
-        if (!source) throw new Error('No <source> in <link>');
+      const source = link.getAttribute('href');
+      if (!source) throw new Error('No <source> in <link>');
 
-        return Promise.resolve({
-          author: '',
-          authorURL: '',
-          postURL: url.href,
-          caption: '',
-          medias: [
-            {
-              type: 'photo',
-              externalUrl: SafeParseURL(source, url.origin).href,
-            },
-          ],
-        });
-      } catch (e) {
-        return Promise.reject(e);
-      }
+      return Promise.resolve({
+        author: '',
+        authorURL: '',
+        postURL: url.href,
+        caption: '',
+        medias: [
+          {
+            type: 'photo',
+            externalUrl: SafeParseURL(source, url.origin).href,
+          },
+        ],
+      });
     });
 }

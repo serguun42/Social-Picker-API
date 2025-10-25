@@ -1,19 +1,21 @@
-import { exec } from 'child_process';
-import { createHash } from 'crypto';
-import { resolve as pathResolve } from 'path';
-import { createWriteStream } from 'fs';
-import { unlink } from 'fs/promises';
-import { pipeline } from 'stream/promises';
+import { exec } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { createWriteStream } from 'node:fs';
+import { unlink } from 'node:fs/promises';
+import { resolve as pathResolve } from 'node:path';
+import { pipeline } from 'node:stream/promises';
+
 import fetch from 'node-fetch';
-import LogMessageOrError from './log.js';
-import { VideoAudioMerged } from '../types/social-post.js';
+
+import { VideoAudioMerged } from '../../types/social-post.js';
+import LogMessageOrError from '../log.js';
 
 const TEMP_FOLDER = process.env.TEMP || '/tmp/';
 
-type VideoAudioMergeOptions = {
+interface VideoAudioMergeOptions {
   loopVideo?: boolean | undefined;
   loopAudio?: boolean | undefined;
-};
+}
 
 export default function VideoAudioMerge(
   videoURL: string | undefined,

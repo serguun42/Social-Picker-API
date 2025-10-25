@@ -1,9 +1,10 @@
 import fetch from 'node-fetch';
+
+import Instagram from './instagram.js';
+import Twitter from './twitter.js';
 import { OsnovaPost } from '../../types/osnova-post.js';
 import { Media, SocialPost } from '../../types/social-post.js';
-import Twitter from './twitter.js';
-import Instagram from './instagram.js';
-import { SafeParseURL } from '../../util/urls.js';
+import { SafeParseURL } from '../../util/links/urls.js';
 import LogMessageOrError from '../../util/log.js';
 
 export default function Osnova(url: URL): Promise<SocialPost | undefined> {

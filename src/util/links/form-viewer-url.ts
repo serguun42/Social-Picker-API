@@ -1,6 +1,6 @@
-import LoadConfig from './load-configs.js';
+import loadConfig from '../load-configs.js';
 
-const { CUSTOM_IMG_VIEWER_SERVICE } = LoadConfig('service');
+const { CUSTOM_IMG_VIEWER_SERVICE } = loadConfig('service');
 
 /** Creates proxy URL for image storages with limited access */
 export default function FormViewerURL(
@@ -14,7 +14,7 @@ export default function FormViewerURL(
 
   try {
     return decodeURI(replaced);
-  } catch (e) {
+  } catch {
     return replaced;
   }
 }
