@@ -1,12 +1,14 @@
 import { exec } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { resolve as pathResolve } from 'node:path';
 import { createWriteStream } from 'node:fs';
-import { unlink, stat } from 'node:fs/promises';
+import { stat, unlink } from 'node:fs/promises';
+import { resolve as pathResolve } from 'node:path';
 import { pipeline } from 'node:stream/promises';
+
 import fetch from 'node-fetch';
-import LogMessageOrError from './log.js';
-import { VideoCodecConverted } from '../types/social-post.js';
+
+import { VideoCodecConverted } from '../../types/social-post.js';
+import LogMessageOrError from '../log.js';
 
 const TEMP_FOLDER = process.env.TEMP || '/tmp/';
 

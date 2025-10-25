@@ -1,13 +1,16 @@
 import TumblrJS, { TumblrError } from '@serguun42/tumblr.js';
-import LoadConfig from '../../util/load-configs.js';
+
 import { Media, SocialPost } from '../../types/social-post.js';
 import { Medium, TumblrPost } from '../../types/tumblr.js';
+import loadConfig from '../../util/load-configs.js';
 
-const { TUMBLR_OAUTH } = LoadConfig('tokens');
+const { TUMBLR_OAUTH } = loadConfig('tokens');
 
-const tumblrClient = TumblrJS.createClient(TUMBLR_OAUTH);
+const tumblrClient = TUMBLR_OAUTH ? TumblrJS.createClient(TUMBLR_OAUTH) : null;
 
 export default function Tumblr(url: URL): Promise<SocialPost | undefined> {
+  if (!tumblrClient?.baseUrl) return Promise.resolve(undefined);
+
   const MAIN_DOMAIN_RX = /^\/(?<blogID>[^/]+)\/(?<postID>\d+)/i;
   const API_PATH_BASE = '/v2/blog/__BLOG_ID__/posts/__POST_ID__';
 

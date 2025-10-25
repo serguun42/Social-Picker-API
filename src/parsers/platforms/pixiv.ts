@@ -1,16 +1,12 @@
-import { parse as parseHTML } from 'node-html-parser';
 import fetch from 'node-fetch';
-import { SocksProxyAgent } from 'socks-proxy-agent';
-import { SocialPost } from '../../types/social-post.js';
-import LoadConfig from '../../util/load-configs.js';
-import DEFAULT_HEADERS from '../default-headers.js';
-import { PixivPreload, UgoiraMeta } from '../../types/pixiv.js';
-import UgoiraBuilder from '../../util/ugoira-builder.js';
-import FormViewerURL from '../../util/form-viewer-url.js';
+import { parse as parseHTML } from 'node-html-parser';
 
-const { PROXY_HOSTNAME, PROXY_PORT } = LoadConfig('service');
-const PROXY_AGENT =
-  PROXY_HOSTNAME && PROXY_PORT ? new SocksProxyAgent(`socks5://${PROXY_HOSTNAME}:${PROXY_PORT}`) : undefined;
+import { PixivPreload, UgoiraMeta } from '../../types/pixiv.js';
+import { SocialPost } from '../../types/social-post.js';
+import FormViewerURL from '../../util/links/form-viewer-url.js';
+import UgoiraBuilder from '../../util/media/ugoira-builder.js';
+import PROXY_AGENT from '../../util/proxy.js';
+import DEFAULT_HEADERS from '../default-headers.js';
 
 export default function Pixiv(
   url: URL,

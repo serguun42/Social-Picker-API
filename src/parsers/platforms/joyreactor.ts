@@ -1,12 +1,13 @@
-import { parse as parseHTML } from 'node-html-parser';
 import fetch from 'node-fetch';
-import { Media, SocialPost } from '../../types/social-post.js';
-import FormViewerURL from '../../util/form-viewer-url.js';
-import { SafeParseURL } from '../../util/urls.js';
-import DEFAULT_HEADERS from '../default-headers.js';
-import LoadConfig from '../../util/load-configs.js';
+import { parse as parseHTML } from 'node-html-parser';
 
-const { JOYREACTOR_COOKIE } = LoadConfig('tokens');
+import { Media, SocialPost } from '../../types/social-post.js';
+import FormViewerURL from '../../util/links/form-viewer-url.js';
+import { SafeParseURL } from '../../util/links/urls.js';
+import loadConfig from '../../util/load-configs.js';
+import DEFAULT_HEADERS from '../default-headers.js';
+
+const { JOYREACTOR_COOKIE } = loadConfig('tokens');
 
 export default function Joyreactor(url: URL): Promise<SocialPost | undefined> {
   const JOYREACTOR_DIRECT_HOSTNAME_RX = /^img\d+\./;
@@ -45,7 +46,7 @@ export default function Joyreactor(url: URL): Promise<SocialPost | undefined> {
     headers: {
       ...DEFAULT_HEADERS,
       referer: 'https://joyreactor.cc/',
-      cookie: JOYREACTOR_COOKIE,
+      ...(JOYREACTOR_COOKIE ? { cookie: JOYREACTOR_COOKIE } : null),
     },
   })
     .then((res) => {

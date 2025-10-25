@@ -1,11 +1,13 @@
 import { exec } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { resolve } from 'node:path';
 import { unlink, writeFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+
 import JSZip from 'jszip';
-import LogMessageOrError from './log.js';
-import { UgoiraMeta } from '../types/pixiv.js';
-import { Media } from '../types/social-post.js';
+
+import { UgoiraMeta } from '../../types/pixiv.js';
+import { Media } from '../../types/social-post.js';
+import LogMessageOrError from '../log.js';
 
 const TEMP_FOLDER = process.env.TEMP || '/tmp/';
 
@@ -17,7 +19,7 @@ export default function UgoiraBuilder(ugoiraMeta: UgoiraMeta, sourceZip: ArrayBu
   return new JSZip()
     .loadAsync(sourceZip)
     .then(async (zipAsObject) => {
-      const ugoiraDelays: { [filename: string]: number } = {};
+      const ugoiraDelays: Record<string, number> = {};
       ugoiraMeta.body.frames.forEach((frame) => {
         ugoiraDelays[frame.file] = frame.delay;
       });

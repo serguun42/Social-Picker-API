@@ -1,113 +1,101 @@
+import { stat } from 'node:fs/promises';
+import { resolve } from 'node:path';
+
 import YTDlpWrap from 'yt-dlp-wrap';
-import fetch from 'node-fetch';
-import { SocksProxyAgent } from 'socks-proxy-agent';
-import LoadConfig from '../../util/load-configs.js';
-import DEFAULT_HEADERS from '../default-headers.js';
-import YtDlpOutput from '../../types/yt-dlp.js';
+
+import { GalleryDLInstagramMediaType } from '../../types/gallery-dl.js';
 import { Media, SocialPost } from '../../types/social-post.js';
-import InstagramPageWithPost from '../../types/instagram.js';
-import VideoAudioMerge from '../../util/video-audio-merge.js';
-import { SafeParseURL } from '../../util/urls.js';
+import { YtDlpOutput } from '../../types/yt-dlp.js';
+import FormViewerURL from '../../util/links/form-viewer-url.js';
+import { SafeParseURL } from '../../util/links/urls.js';
+import loadConfig from '../../util/load-configs.js';
+import LogMessageOrError from '../../util/log.js';
+import VideoAudioMerge from '../../util/media/video-audio-merge.js';
+import galleryDL from '../common/gallery-dl.js';
 
-const { PROXY_HOSTNAME, PROXY_PORT } = LoadConfig('service');
-const PROXY_AGENT =
-  PROXY_HOSTNAME && PROXY_PORT ? new SocksProxyAgent(`socks5://${PROXY_HOSTNAME}:${PROXY_PORT}`) : undefined;
-
-const { INSTAGRAM_COOKIE_ONE_LINE_FOR_POSTS, INSTAGRAM_COOKIE_FILE_LOCATION_FOR_REELS } = LoadConfig('tokens');
+const { INSTAGRAM_COOKIE_FILE_LOCATION } = loadConfig('tokens');
+const { PROXY_HOSTNAME, PROXY_PORT } = loadConfig('service');
 
 // eslint-disable-next-line new-cap
 const ytDlpClient = new YTDlpWrap.default();
 
-export default function Instagram(url: URL): Promise<SocialPost | undefined> {
+export default async function Instagram(url: URL): Promise<SocialPost | undefined> {
+  if (!INSTAGRAM_COOKIE_FILE_LOCATION) return Promise.resolve(undefined);
+
+  const cookiesFileExists = await stat(resolve(INSTAGRAM_COOKIE_FILE_LOCATION))
+    .then((stats) => {
+      if (!stats.isFile()) return Promise.reject(new Error(`${INSTAGRAM_COOKIE_FILE_LOCATION} is not a file`));
+
+      return true;
+    })
+    .catch((e) => {
+      LogMessageOrError(e);
+      return false;
+    });
+
+  if (!cookiesFileExists) return Promise.resolve(undefined);
+
   const POST_PATHNAME_RX = /^\/p\/[\w-]+\/?$/i;
   const REEL_PATHNAME_RX = /^\/reel\/[\w-]+\/?$/i;
 
   if (POST_PATHNAME_RX.test(url.pathname))
-    return fetch(`https://${url.hostname}${url.pathname}?__a=1&__d=dis`, {
-      headers: {
-        ...DEFAULT_HEADERS,
-        referer: 'https://www.instagram.com/',
-        cookie: INSTAGRAM_COOKIE_ONE_LINE_FOR_POSTS,
-      },
-      agent: PROXY_AGENT,
-    })
-      .then((res) => {
-        if (res.ok) return res.json() as Promise<InstagramPageWithPost>;
-        return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
-      })
-      .then((graphData) => {
-        const post = graphData?.items?.[0];
+    return galleryDL<'instagram'>(url.href, resolve(INSTAGRAM_COOKIE_FILE_LOCATION)).then((parsedPost) => {
+      if (!Array.isArray(parsedPost)) return Promise.reject(new Error("gallery-dl didn't return an array"));
 
-        if (!post) return Promise.reject(new Error(`No post in... post: https://${url.hostname}${url.pathname}`));
+      const username =
+        parsedPost
+          .map((item) => (item[0] === 2 ? item[1]?.username : item[0] === 3 ? item[2]?.username : undefined))
+          .find((author) => typeof author === 'string' && !!author) || '';
 
-        const socialPost: SocialPost = {
-          caption: post?.caption?.text || '',
-          postURL: `https://instagram.com${url.pathname}`,
-          author: post?.user?.username,
-          authorURL: `https://instagram.com/${post?.user?.username}`,
-          medias: [],
-        };
-
-        const singleVideo = post.video_versions;
-        const singleImage = post.image_versions2?.candidates;
-        const multipleMedia = post.carousel_media;
-
-        if (multipleMedia) {
-          socialPost.medias = multipleMedia
-            .map((media): Media | null => {
-              if (!media) return null;
-
-              if (media.video_versions)
-                return {
-                  type: 'video',
-                  externalUrl: media.video_versions?.pop()?.url,
-                };
-
-              const candidates = media?.image_versions2?.candidates;
-
-              return {
-                type: 'photo',
-                externalUrl: candidates.sort((prev, next) => next.width - prev.width)?.[0]?.url,
-              };
+      const socialPost: SocialPost = {
+        author: username,
+        authorURL: `https://instagram.com/${username}`,
+        caption:
+          parsedPost
+            .map((item) => (item[0] === 2 ? item[1]?.description?.trim() : undefined))
+            .find((description) => !!description?.trim()) || '',
+        postURL: new URL(url.pathname, url.origin).href,
+        medias: parsedPost
+          .filter((item) => item[0] === 3)
+          .filter(
+            (item) =>
+              typeof item[1] === 'string' &&
+              (['reel', 'post'] satisfies GalleryDLInstagramMediaType[]).includes(item[2]?.type)
+          )
+          .map(
+            (item): Media => ({
+              type: item[2].video_url ? 'video' : 'photo',
+              externalUrl: FormViewerURL(
+                item[2].video_url || item[1],
+                new URL(item[2].video_url || item[1]).origin,
+                true
+              ),
+              original: FormViewerURL(item[2].video_url || item[1], new URL(item[2].video_url || item[1]).origin, true),
             })
-            .filter((media): media is Media => !!media);
-        } else if (singleVideo) {
-          socialPost.medias = [
-            {
-              type: 'video',
-              externalUrl: singleVideo.sort((prev, next) => next.width - prev.width)?.[0]?.url,
-            },
-          ];
-        } else if (singleImage) {
-          socialPost.medias = [
-            {
-              type: 'photo',
-              externalUrl: singleImage.sort((prev, next) => next.width - prev.width)?.[0]?.url,
-            },
-          ];
-        }
+          )
+          .filter(Boolean),
+      };
 
-        return Promise.resolve(socialPost);
-      });
+      return socialPost;
+    });
 
   if (REEL_PATHNAME_RX.test(url.pathname)) {
-    const ytDlpArgs: string[] = [
+    const ytDlpArgs = [
       url.href,
       '--dump-json',
-      PROXY_HOSTNAME && PROXY_PORT ? '--proxy' : '',
-      PROXY_HOSTNAME && PROXY_PORT ? `socks5://${PROXY_HOSTNAME}:${PROXY_PORT}` : '',
+      ...(PROXY_HOSTNAME && PROXY_PORT ? ['--proxy', `socks5://${PROXY_HOSTNAME}:${PROXY_PORT}`] : []),
       '--cookies',
-      INSTAGRAM_COOKIE_FILE_LOCATION_FOR_REELS,
-    ].filter(Boolean);
+      INSTAGRAM_COOKIE_FILE_LOCATION,
+    ].filter((arg): arg is string => !!arg);
 
     return ytDlpClient
       .execPromise(ytDlpArgs)
       .then(
         (ytDlpPlainOutput) =>
-          new Promise((resolve: (ytDlpOutput: YtDlpOutput) => void, reject) => {
+          new Promise((ytDLPResolve: (ytDlpOutput: YtDlpOutput) => void, reject) => {
             try {
               const parsedYtDlp = JSON.parse(ytDlpPlainOutput);
-              resolve(parsedYtDlp);
+              ytDLPResolve(parsedYtDlp);
             } catch (e) {
               reject(e);
             }

@@ -72,18 +72,18 @@ export interface PostMediaData {
   external_service: PostExternalService;
 }
 
-export type PostMedia = {
+export interface PostMedia {
   type: string;
   data: PostMediaData;
-};
+}
 
-export type PostBlockMediaItem = {
+export interface PostBlockMediaItem {
   title: string;
   author?: string;
   image: PostMedia;
-};
+}
 
-export type PostBlockTypeText = {
+export interface PostBlockTypeText {
   type: 'text';
   data: {
     text: string;
@@ -92,9 +92,9 @@ export type PostBlockTypeText = {
   anchor: string;
   cover: boolean;
   hidden: boolean;
-};
+}
 
-export type PostBlockTypeHeader = {
+export interface PostBlockTypeHeader {
   type: 'header';
   data: {
     text: string;
@@ -103,9 +103,9 @@ export type PostBlockTypeHeader = {
   anchor: string;
   cover: boolean;
   hidden: boolean;
-};
+}
 
-export type PostBlockTypeList = {
+export interface PostBlockTypeList {
   type: 'list';
   data: {
     type: 'UL';
@@ -114,9 +114,9 @@ export type PostBlockTypeList = {
   anchor: string;
   cover: boolean;
   hidden: boolean;
-};
+}
 
-export type PostBlockTypeMedia = {
+export interface PostBlockTypeMedia {
   type: 'media';
   data: {
     items: PostBlockMediaItem[];
@@ -126,9 +126,9 @@ export type PostBlockTypeMedia = {
   anchor: string;
   cover: boolean;
   hidden: boolean;
-};
+}
 
-export type PostBlockTypeVideo = {
+export interface PostBlockTypeVideo {
   type: 'video';
   data: {
     video: PostVideo;
@@ -136,9 +136,9 @@ export type PostBlockTypeVideo = {
   anchor: string;
   cover: boolean;
   hidden: boolean;
-};
+}
 
-export type PostBlockTypeAudio = {
+export interface PostBlockTypeAudio {
   type: 'audio';
   data: {
     title: string;
@@ -164,9 +164,9 @@ export type PostBlockTypeAudio = {
   anchor: string;
   cover: boolean;
   hidden: boolean;
-};
+}
 
-export type PostBlockTypeIncut = {
+export interface PostBlockTypeIncut {
   type: 'incut';
   data: {
     text: string;
@@ -176,9 +176,9 @@ export type PostBlockTypeIncut = {
   anchor: string;
   cover: boolean;
   hidden: boolean;
-};
+}
 
-export type PostBlockTypeNumber = {
+export interface PostBlockTypeNumber {
   type: 'number';
   data: {
     title: string;
@@ -187,9 +187,9 @@ export type PostBlockTypeNumber = {
   anchor: string;
   cover: boolean;
   hidden: boolean;
-};
+}
 
-export type PostBlockTypeQuote = {
+export interface PostBlockTypeQuote {
   type: 'quote';
   data: {
     image?: PostMedia;
@@ -201,9 +201,9 @@ export type PostBlockTypeQuote = {
   anchor: string;
   cover: boolean;
   hidden: boolean;
-};
+}
 
-export type PostBlockTypePerson = {
+export interface PostBlockTypePerson {
   type: 'person';
   data: {
     image?: PostMedia;
@@ -213,9 +213,9 @@ export type PostBlockTypePerson = {
   anchor: string;
   cover: boolean;
   hidden: boolean;
-};
+}
 
-export type PostBlockTypeTweet = {
+export interface PostBlockTypeTweet {
   type: 'tweet';
   data: {
     media: boolean;
@@ -234,9 +234,9 @@ export type PostBlockTypeTweet = {
   anchor: string;
   cover: boolean;
   hidden: boolean;
-};
+}
 
-export type PostBlockTypeTelegram = {
+export interface PostBlockTypeTelegram {
   type: 'telegram';
   data: {
     title: string;
@@ -252,9 +252,9 @@ export type PostBlockTypeTelegram = {
   anchor: string;
   cover: boolean;
   hidden: boolean;
-};
+}
 
-export type PostBlockTypeInstagram = {
+export interface PostBlockTypeInstagram {
   type: 'instagram';
   data: {
     title: string;
@@ -271,17 +271,17 @@ export type PostBlockTypeInstagram = {
   anchor: string;
   cover: boolean;
   hidden: boolean;
-};
+}
 
-export type PostBlockTypeDelimiter = {
+export interface PostBlockTypeDelimiter {
   type: 'delimiter';
   data: object;
   anchor: string;
   cover: boolean;
   hidden: boolean;
-};
+}
 
-export type PostBlockTypeLink = {
+export interface PostBlockTypeLink {
   type: 'link';
   data: {
     link: {
@@ -298,15 +298,15 @@ export type PostBlockTypeLink = {
   anchor: string;
   cover: boolean;
   hidden: boolean;
-};
+}
 
-export type PostBlockTypeDefault = {
+export interface PostBlockTypeDefault {
   type: 'default';
   data: object;
   anchor: string;
   cover: boolean;
   hidden: boolean;
-};
+}
 
 export type PostBlock =
   | PostBlockTypeText

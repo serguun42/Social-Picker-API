@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 import { writeFile } from 'node:fs/promises';
 import { inspect } from 'node:util';
+
 import IS_DEV from './is-dev.js';
 
 const SHORT_DELIMITER = Array.from({ length: 30 }, () => '~').join('');

@@ -1,18 +1,15 @@
 import fetch from 'node-fetch';
-import { SocksProxyAgent } from 'socks-proxy-agent';
-import RedditPost from '../../types/reddit-post.js';
+
+import { RedditPost } from '../../types/reddit-post.js';
 import { Media, SocialPost } from '../../types/social-post.js';
-import FormViewerURL from '../../util/form-viewer-url.js';
-import LoadConfig from '../../util/load-configs.js';
-import { SafeParseURL } from '../../util/urls.js';
-import VideoAudioMerge from '../../util/video-audio-merge.js';
+import FormViewerURL from '../../util/links/form-viewer-url.js';
+import { SafeParseURL } from '../../util/links/urls.js';
+import loadConfig from '../../util/load-configs.js';
+import VideoAudioMerge from '../../util/media/video-audio-merge.js';
+import PROXY_AGENT from '../../util/proxy.js';
 import DEFAULT_HEADERS from '../default-headers.js';
 
-const { PROXY_HOSTNAME, PROXY_PORT } = LoadConfig('service');
-const PROXY_AGENT =
-  PROXY_HOSTNAME && PROXY_PORT ? new SocksProxyAgent(`socks5://${PROXY_HOSTNAME}:${PROXY_PORT}`) : undefined;
-
-const { REDDIT_COOKIE } = LoadConfig('tokens');
+const { REDDIT_COOKIE } = loadConfig('tokens');
 
 export default function Reddit(url: URL): Promise<SocialPost | undefined> {
   if (!url.pathname) return Promise.resolve(undefined);
@@ -51,7 +48,13 @@ export default function Reddit(url: URL): Promise<SocialPost | undefined> {
     });
   }
 
-  return fetch(`${postURL}.json`, { headers: { ...REDDIT_HEADERS, cookie: REDDIT_COOKIE }, agent: PROXY_AGENT })
+  return fetch(`${postURL}.json`, {
+    headers: {
+      ...REDDIT_HEADERS,
+      ...(REDDIT_COOKIE ? { cookie: REDDIT_COOKIE } : null),
+    },
+    agent: PROXY_AGENT,
+  })
     .then((res) => {
       if (res.ok) return res.json() as Promise<RedditPost>;
       return Promise.reject(new Error(`Status code ${res.status} ${res.statusText} (${res.url})`));
@@ -176,7 +179,7 @@ export default function Reddit(url: URL): Promise<SocialPost | undefined> {
                 type: 'photo',
                 externalUrl: `https://${previewUrl.hostname.replace(/^preview\./i, 'i.')}${previewUrl.pathname}`,
               };
-            } catch (e) {
+            } catch {
               return null;
             }
           })

@@ -157,8 +157,9 @@ export interface ChildData {
       },
     ];
   };
-  media_metadata?: {
-    [mediaKey: string]: {
+  media_metadata?: Record<
+    string,
+    {
       status: 'valid';
       e: string;
       /** MIME-type */
@@ -183,8 +184,8 @@ export interface ChildData {
       };
       /** Can be used to retrieve media from `https://i.redd.it/%ID%.png` (if it's an image or whatever) */
       id: string;
-    };
-  };
+    }
+  >;
   /** Crosspost parent, `t3_ACTUALID` */
   crosspost_parent?: string;
 }

@@ -1,10 +1,11 @@
 import fetch from 'node-fetch';
 import { parse as parseHTML } from 'node-html-parser';
+
+import { CoubPost, QualityOption } from '../../types/coub-post.js';
 import { SocialPost } from '../../types/social-post.js';
+import { SafeParseURL } from '../../util/links/urls.js';
+import VideoAudioMerge from '../../util/media/video-audio-merge.js';
 import DEFAULT_HEADERS from '../default-headers.js';
-import VideoAudioMerge from '../../util/video-audio-merge.js';
-import CoubPost, { QualityOption } from '../../types/coub-post.js';
-import { SafeParseURL } from '../../util/urls.js';
 
 export default function Coub(url: URL): Promise<SocialPost | undefined> {
   const COUB_VIDEO_RX = /^\/view\/(?<videoID>\w+)/;
